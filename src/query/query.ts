@@ -37,10 +37,7 @@ export class Query {
    * @param params Object with parameter values
    * @returns Result with Query instance or error
    */
-  static create(
-    sql: string,
-    params?: Record<string, unknown>
-  ): Result<Query> {
+  static create(sql: string, params?: Record<string, unknown>): Result<Query> {
     try {
       // Extract all :name placeholders from SQL
       const placeholderPattern = /:([a-zA-Z_][a-zA-Z0-9_]*)/g
@@ -49,15 +46,13 @@ export class Query {
 
       do {
         match = placeholderPattern.exec(sql)
-        if (match !== null) {
+        if (match?.[1]) {
           placeholders.push(match[1])
         }
       } while (match !== null)
 
       // Check for duplicates
-      const duplicates = placeholders.filter(
-        (p, i) => placeholders.indexOf(p) !== i
-      )
+      const duplicates = placeholders.filter((p, i) => placeholders.indexOf(p) !== i)
       if (duplicates.length > 0) {
         return {
           isError: true,
@@ -69,7 +64,7 @@ export class Query {
       const uniquePlaceholders = [...new Set(placeholders)]
 
       // Validate all placeholders have values
-      const missingParams = uniquePlaceholders.filter((p) => !(p in providedParams))
+      const missingParams = uniquePlaceholders.filter(p => !(p in providedParams))
       if (missingParams.length > 0) {
         return {
           isError: true,
@@ -78,9 +73,7 @@ export class Query {
       }
 
       // Check for extra parameters
-      const extraParams = Object.keys(providedParams).filter(
-        (p) => !uniquePlaceholders.includes(p)
-      )
+      const extraParams = Object.keys(providedParams).filter(p => !uniquePlaceholders.includes(p))
       if (extraParams.length > 0) {
         return {
           isError: true,
@@ -89,18 +82,11 @@ export class Query {
       }
 
       // Convert named placeholders to positional (?)
-      const positionalParams = uniquePlaceholders.map(
-        (p) => providedParams[p]
-      )
+      const positionalParams = uniquePlaceholders.map(p => providedParams[p])
 
       return {
         isError: false,
-        value: new Query(
-          sql,
-          providedParams,
-          uniquePlaceholders,
-          positionalParams
-        ),
+        value: new Query(sql, providedParams, uniquePlaceholders, positionalParams),
       }
     } catch (error) {
       return {

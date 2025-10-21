@@ -27,11 +27,10 @@ export type BunPreparedStatement = {
 
 /**
  * Result from executing an INSERT/UPDATE/DELETE statement
- * Contains change count and optionally the last inserted row ID
+ * Contains change count
  */
 export type BunRunResult = {
   changes: number
-  lastInsertRowid?: number | bigint
 }
 
 /**
@@ -39,9 +38,7 @@ export type BunRunResult = {
  * @param bunDb Bun's native SQLite database connection
  * @returns DatabaseConnection instance compatible with the library
  */
-export function createDatabaseConnection(
-  bunDb: BunSQLiteConnection
-): DatabaseConnection {
+export function createDatabaseConnection(bunDb: BunSQLiteConnection): DatabaseConnection {
   return {
     prepare(sql: string) {
       const stmt = bunDb.prepare(sql)
@@ -50,8 +47,7 @@ export function createDatabaseConnection(
           const result = stmt.run(...params)
           return {
             changes: result.changes,
-            lastInsertRowid: result.lastInsertRowid,
-          } satisfies Record<string, unknown>
+          }
         },
         get(...params: unknown[]) {
           return stmt.get(...params)

@@ -38,10 +38,7 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
    */
   findById(id: TId): Result<TEntity | null> {
     try {
-      const queryResult = Query.create(
-        `SELECT * FROM ${this.tableName} WHERE id = :id`,
-        { id }
-      )
+      const queryResult = Query.create(`SELECT * FROM ${this.tableName} WHERE id = :id`, { id })
 
       if (queryResult.isError) {
         return queryResult
@@ -80,7 +77,7 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
 
       return {
         isError: false,
-        value: rows.map((row) => this.mapRow(row)),
+        value: rows.map(row => this.mapRow(row)),
       }
     } catch (error) {
       return {
@@ -102,7 +99,7 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
 
       return {
         isError: false,
-        value: rows.map((row) => this.mapRow(row)),
+        value: rows.map(row => this.mapRow(row)),
       }
     } catch (error) {
       return {
@@ -191,10 +188,9 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
    */
   exists(id: TId): Result<boolean> {
     try {
-      const queryResult = Query.create(
-        `SELECT 1 FROM ${this.tableName} WHERE id = :id LIMIT 1`,
-        { id }
-      )
+      const queryResult = Query.create(`SELECT 1 FROM ${this.tableName} WHERE id = :id LIMIT 1`, {
+        id,
+      })
 
       if (queryResult.isError) {
         return queryResult
@@ -290,10 +286,7 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
    */
   deleteById(id: TId): Result<boolean> {
     try {
-      const queryResult = Query.create(
-        `DELETE FROM ${this.tableName} WHERE id = :id`,
-        { id }
-      )
+      const queryResult = Query.create(`DELETE FROM ${this.tableName} WHERE id = :id`, { id })
 
       if (queryResult.isError) {
         return queryResult

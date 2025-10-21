@@ -5,9 +5,7 @@
 /**
  * Result type for error handling - never throws
  */
-export type Result<T> =
-  | { isError: false; value: T }
-  | { isError: true; error: string }
+export type Result<T> = { isError: false; value: T } | { isError: true; error: string }
 
 /**
  * SQLite pragma configuration
@@ -49,7 +47,6 @@ export interface PreparedStatement {
  */
 export interface RunResult {
   changes: number
-  lastInsertRowid?: number | bigint
 }
 
 /**

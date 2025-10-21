@@ -64,7 +64,7 @@ export class DatabaseConfig {
    * @param value Pragma value
    */
   setPragma(key: string, value: string | number | boolean): void {
-    const index = this.pragmas.findIndex((p) => p.key === key)
+    const index = this.pragmas.findIndex(p => p.key === key)
     if (index >= 0) {
       this.pragmas[index] = { key, value }
     } else {

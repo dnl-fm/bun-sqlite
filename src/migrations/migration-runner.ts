@@ -27,10 +27,7 @@ export class MigrationRunner {
    * @param connection Database connection to run migrations on
    * @param migrations Record mapping version strings to migration modules
    */
-  constructor(
-    connection: DatabaseConnection,
-    migrations: Record<string, MigrationModule>
-  ) {
+  constructor(connection: DatabaseConnection, migrations: Record<string, MigrationModule>) {
     this.connection = connection
     this.migrations = new Map(Object.entries(migrations))
   }
@@ -68,9 +65,9 @@ export class MigrationRunner {
       let migratedCount = 0
 
       for (const version of sortedVersions) {
-        const isApplied = this.connection.prepare(
-          "SELECT 1 FROM _migrations WHERE version = ?"
-        ).get(version)
+        const isApplied = this.connection
+          .prepare("SELECT 1 FROM _migrations WHERE version = ?")
+          .get(version)
 
         if (!isApplied) {
           const result = await this.runMigration(version)
@@ -93,18 +90,20 @@ export class MigrationRunner {
   /**
    * Get migration status
    */
-  async status(): Promise<Result<{
-    applied: string[]
-    pending: string[]
-  }>> {
+  async status(): Promise<
+    Result<{
+      applied: string[]
+      pending: string[]
+    }>
+  > {
     try {
       await this.initialize()
 
       const stmt = this.connection.prepare("SELECT version FROM _migrations")
-      const applied = (stmt.all() as { version: string }[]).map((r) => r.version)
+      const applied = (stmt.all() as { version: string }[]).map(r => r.version)
 
       const allVersions = Array.from(this.migrations.keys())
-      const pending = allVersions.filter((v) => !applied.includes(v))
+      const pending = allVersions.filter(v => !applied.includes(v))
 
       return {
         isError: false,
@@ -143,10 +142,12 @@ export class MigrationRunner {
 
       // Record migration
       const now = Date.now()
-      this.connection.prepare(
-        `INSERT INTO _migrations (version, name, applied_at, checksum)
+      this.connection
+        .prepare(
+          `INSERT INTO _migrations (version, name, applied_at, checksum)
          VALUES (?, ?, ?, ?)`
-      ).run(version, version, now, "")
+        )
+        .run(version, version, now, "")
 
       return { isError: false, value: undefined }
     } catch (error) {
