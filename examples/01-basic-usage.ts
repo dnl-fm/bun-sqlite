@@ -1,76 +1,88 @@
 /**
  * Example 1: Basic Usage of @dnl-fm/bun-sqlite
- * Demonstrates core features: Database, Query, and Repository patterns
+ * Demonstrates core features: Database, Query, Repository patterns, and Zeit timezone handling
  */
 
-import { Database, Query, BaseRepository, Ulid } from "../src/index.ts"
+import {
+  Database,
+  Query,
+  BaseRepository,
+  Zeit,
+  Timezone,
+  Ulid,
+} from "../src/index.ts";
+import { UserId } from "./value-objects.ts";
 
 // ============================================================================
 // STEP 1: Create a simple entity
 // ============================================================================
 
 interface User {
-  id: string
-  email: string
-  name: string
-  createdAt: number
+  id: UserId; // Type-safe UserId value object
+  email: string;
+  name: string;
+  createdAt: Zeit; // Complex value object with full timezone awareness
 }
 
 // ============================================================================
 // STEP 2: Create a repository for the entity
 // ============================================================================
 
-class UserRepository extends BaseRepository<User, string> {
+class UserRepository extends BaseRepository<User, UserId> {
   constructor(db: Database) {
-    super(db.getConnection(), "users")
+    super(db.getConnection(), "users");
   }
 
   /**
    * Implement required mapRow method to convert DB rows to entities
    */
   mapRow(row: unknown): User {
-    const r = row as Record<string, unknown>
+    const r = row as Record<string, unknown>;
+    // Reconstruct Zeit from stored UTC timestamp and timezone metadata
+    const userTimezone = r.timezone as string;
+    const zeitFactory = Zeit.withUserZone(userTimezone);
+
     return {
-      id: r.id as string,
+      id: UserId.fromString(r.id as string),
       email: r.email as string,
       name: r.name as string,
-      createdAt: r.created_at as number,
-    }
+      createdAt: zeitFactory.fromDatabase(r.created_at as number),
+    };
   }
 
   /**
    * Custom business methods
    */
   findByEmail(email: string) {
-    const query = Query.create(
-      "SELECT * FROM users WHERE email = :email",
-      { email }
-    )
+    const query = Query.create("SELECT * FROM users WHERE email = :email", {
+      email,
+    });
 
     if (query.isError) {
-      return query
+      return query;
     }
 
-    return this.findOneByQuery(query.value)
+    return this.findOneByQuery(query.value);
   }
 
   saveUser(user: User) {
     const query = Query.create(
-      `INSERT INTO users (id, email, name, created_at)
-       VALUES (:id, :email, :name, :createdAt)`,
+      `INSERT INTO users (id, email, name, created_at, timezone)
+       VALUES (:id, :email, :name, :createdAt, :timezone)`,
       {
-        id: user.id,
+        id: user.id.toString(),
         email: user.email,
         name: user.name,
-        createdAt: user.createdAt,
-      }
-    )
+        createdAt: user.createdAt.toDatabase(), // Extract UTC timestamp from Zeit
+        timezone: user.createdAt.getTimezone(), // Extract timezone from Zeit
+      },
+    );
 
     if (query.isError) {
-      return query
+      return query;
     }
 
-    return this.insert(query.value)
+    return this.insert(query.value);
   }
 }
 
@@ -80,14 +92,14 @@ class UserRepository extends BaseRepository<User, string> {
 
 async function main() {
   // Create database
-  const dbResult = await Database.getInstance(":memory:")
+  const dbResult = await Database.getInstance(":memory:");
 
   if (dbResult.isError) {
-    console.error("Failed to initialize database:", dbResult.error)
-    return
+    console.error("Failed to initialize database:", dbResult.error);
+    return;
   }
 
-  const db = dbResult.value
+  const db = dbResult.value;
 
   // Initialize schema
   db.getConnection().exec(`
@@ -95,60 +107,81 @@ async function main() {
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      timezone TEXT NOT NULL
     )
-  `)
+  `);
 
   // Create repository
-  const userRepo = new UserRepository(db)
+  const userRepo = new UserRepository(db);
 
   // ========================================================================
   // Using Query value objects with named placeholders
   // ========================================================================
 
   // Create a user using Query value object
-  // Generate a unique ID using ULID with prefix
-  const userId = Ulid.create({ prefix: "user_" }).toString()
+  // Generate a type-safe user ID using the UserId value object
+  const userId = UserId.create();
+
+  // Create timezone-aware timestamp for user creation (Berlin timezone)
+  // Note: Timezone now supports dot-chain access: Timezone.Europe.Berlin
+  const userTimezone = Timezone.Europe.Berlin;
+  const zeitFactory = Zeit.withUserZone(userTimezone);
+  const createdAt = zeitFactory.now();
 
   const user: User = {
     id: userId,
     email: "alice@example.com",
     name: "Alice",
-    createdAt: Date.now(),
-  }
+    createdAt, // Store as Zeit object - contains all timezone context
+  };
 
-  const saveResult = userRepo.saveUser(user)
+  const saveResult = userRepo.saveUser(user);
   if (saveResult.isError) {
-    console.error("Failed to save user:", saveResult.error)
+    console.error("Failed to save user:", saveResult.error);
   } else {
-    console.log("✓ User saved successfully")
+    console.log("✓ User saved successfully");
   }
 
   // ========================================================================
   // Find user by ID
   // ========================================================================
 
-  const findResult = userRepo.findById(userId)
+  const findResult = userRepo.findById(userId);
   if (!findResult.isError && findResult.value) {
-    console.log("✓ Found user:", findResult.value.name)
+    const foundUser = findResult.value;
+    console.log("✓ Found user:", foundUser.name);
+
+    // Time value objects provide full comparison power
+    console.log(`  Created: ${foundUser.createdAt.toUser()}`);
+    console.log(`  Timezone: ${foundUser.createdAt.getTimezone()}`);
+
+    // Can compare Zeit instances directly
+    const nowFactory = Zeit.withUserZone(foundUser.createdAt.getTimezone());
+    const now = nowFactory.now();
+    if (foundUser.createdAt.isBefore(now)) {
+      const ageInMillis = now.diff(foundUser.createdAt);
+      const ageInDays = Math.floor(ageInMillis / (24 * 60 * 60 * 1000));
+      console.log(`  Account age: ${ageInDays} days`);
+    }
   }
 
   // ========================================================================
   // Find user by email (custom method using Query)
   // ========================================================================
 
-  const emailResult = userRepo.findByEmail("alice@example.com")
+  const emailResult = userRepo.findByEmail("alice@example.com");
   if (!emailResult.isError && emailResult.value) {
-    console.log("✓ Found by email:", emailResult.value.email)
+    console.log("✓ Found by email:", emailResult.value.email);
   }
 
   // ========================================================================
   // Find all users
   // ========================================================================
 
-  const allResult = userRepo.findAll()
+  const allResult = userRepo.findAll();
   if (!allResult.isError) {
-    console.log(`✓ Total users: ${allResult.value.length}`)
+    console.log(`✓ Total users: ${allResult.value.length}`);
   }
 
   // ========================================================================
@@ -157,13 +190,13 @@ async function main() {
 
   const updateQuery = Query.create(
     "UPDATE users SET name = :name WHERE id = :id",
-    { name: "Alice Smith", id: userId }
-  )
+    { name: "Alice Smith", id: userId },
+  );
 
   if (!updateQuery.isError) {
-    const updateResult = userRepo.update(updateQuery.value)
+    const updateResult = userRepo.update(updateQuery.value);
     if (!updateResult.isError && updateResult.value > 0) {
-      console.log("✓ User updated successfully")
+      console.log("✓ User updated successfully");
     }
   }
 
@@ -171,24 +204,25 @@ async function main() {
   // Delete using Query
   // ========================================================================
 
-  // First create another user to delete
+  // First create another user to delete (with different timezone)
+  const bobTimezone = Timezone.America.New_York;
+  const bobFactory = Zeit.withUserZone(bobTimezone);
   const deleteUser: User = {
-    id: "user-2",
+    id: Ulid.create({ prefix: "user_" }).toString(),
     email: "bob@example.com",
     name: "Bob",
-    createdAt: Date.now(),
-  }
-  userRepo.saveUser(deleteUser)
+    createdAt: bobFactory.now(),
+  };
+  userRepo.saveUser(deleteUser);
 
-  const deleteQuery = Query.create(
-    "DELETE FROM users WHERE id = :id",
-    { id: "user-2" }
-  )
+  const deleteQuery = Query.create("DELETE FROM users WHERE id = :id", {
+    id: deleteUser.id,
+  });
 
   if (!deleteQuery.isError) {
-    const deleteResult = userRepo.delete(deleteQuery.value)
+    const deleteResult = userRepo.delete(deleteQuery.value);
     if (!deleteResult.isError && deleteResult.value > 0) {
-      console.log("✓ User deleted successfully")
+      console.log("✓ User deleted successfully");
     }
   }
 
@@ -196,9 +230,9 @@ async function main() {
   // Count users
   // ========================================================================
 
-  const countResult = userRepo.count()
+  const countResult = userRepo.count();
   if (!countResult.isError) {
-    console.log(`✓ Total users after delete: ${countResult.value}`)
+    console.log(`✓ Total users after delete: ${countResult.value}`);
   }
 
   // ========================================================================
@@ -207,13 +241,13 @@ async function main() {
 
   const complexQuery = Query.create(
     "SELECT * FROM users WHERE name LIKE :pattern",
-    { pattern: "%Smith%" }
-  )
+    { pattern: "%Smith%" },
+  );
 
   if (!complexQuery.isError) {
-    const result = userRepo.findByQuery(complexQuery.value)
+    const result = userRepo.findByQuery(complexQuery.value);
     if (!result.isError) {
-      console.log(`✓ Found ${result.value.length} users matching pattern`)
+      console.log(`✓ Found ${result.value.length} users matching pattern`);
     }
   }
 
@@ -223,11 +257,11 @@ async function main() {
 
   const invalidQuery = Query.create(
     "SELECT * FROM users WHERE email = :email AND status = :status",
-    { email: "test@example.com" } // Missing :status parameter
-  )
+    { email: "test@example.com" }, // Missing :status parameter
+  );
 
   if (invalidQuery.isError) {
-    console.log("✓ Caught validation error:", invalidQuery.error)
+    console.log("✓ Caught validation error:", invalidQuery.error);
   }
 
   // ========================================================================
@@ -236,17 +270,17 @@ async function main() {
 
   const extraParamQuery = Query.create(
     "SELECT * FROM users WHERE email = :email",
-    { email: "test@example.com", unused: "param" }
-  )
+    { email: "test@example.com", unused: "param" },
+  );
 
   if (extraParamQuery.isError) {
-    console.log("✓ Caught extra param error:", extraParamQuery.error)
+    console.log("✓ Caught extra param error:", extraParamQuery.error);
   }
 
   // Close database
-  db.close()
-  console.log("\n✓ Example completed successfully!")
+  db.close();
+  console.log("\n✓ Example completed successfully!");
 }
 
 // Run example
-main().catch(console.error)
+main().catch(console.error);

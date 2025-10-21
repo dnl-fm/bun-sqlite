@@ -1,23 +1,24 @@
 /**
  * Example 3: Advanced Query Patterns
- * Demonstrates complex queries, transactions, and repository patterns
+ * Demonstrates complex queries, transactions, repository patterns, and branded IDs
  */
 
-import { Database, Query, BaseRepository, Ulid } from "../src/index.ts"
+import { Database, Query, BaseRepository } from "../src/index.ts"
+import { ProductId } from "./branded-ids.ts"
 
 // ============================================================================
 // STEP 1: Define entities and repository
 // ============================================================================
 
 interface Product {
-  id: string
+  id: ProductId
   name: string
   price: number
   stock: number
   category: string
 }
 
-class ProductRepository extends BaseRepository<Product, string> {
+class ProductRepository extends BaseRepository<Product, ProductId> {
   constructor(db: Database) {
     super(db.getConnection(), "products")
   }
@@ -25,7 +26,7 @@ class ProductRepository extends BaseRepository<Product, string> {
   mapRow(row: unknown): Product {
     const r = row as Record<string, unknown>
     return {
-      id: r.id as string,
+      id: ProductId.fromString(r.id as string),
       name: r.name as string,
       price: r.price as number,
       stock: r.stock as number,
@@ -163,42 +164,42 @@ async function main() {
 
   const sampleProducts: Product[] = [
     {
-      id: Ulid.create({ prefix: "product_" }).toString(),
+      id: ProductId.create(),
       name: "Laptop",
       price: 999.99,
       stock: 5,
       category: "Electronics",
     },
     {
-      id: Ulid.create({ prefix: "product_" }).toString(),
+      id: ProductId.create(),
       name: "Mouse",
       price: 29.99,
       stock: 50,
       category: "Electronics",
     },
     {
-      id: Ulid.create({ prefix: "product_" }).toString(),
+      id: ProductId.create(),
       name: "Keyboard",
       price: 79.99,
       stock: 30,
       category: "Electronics",
     },
     {
-      id: Ulid.create({ prefix: "product_" }).toString(),
+      id: ProductId.create(),
       name: "Chair",
       price: 199.99,
       stock: 2,
       category: "Furniture",
     },
     {
-      id: Ulid.create({ prefix: "product_" }).toString(),
+      id: ProductId.create(),
       name: "Desk",
       price: 399.99,
       stock: 1,
       category: "Furniture",
     },
     {
-      id: Ulid.create({ prefix: "product_" }).toString(),
+      id: ProductId.create(),
       name: "Monitor",
       price: 299.99,
       stock: 8,
@@ -211,7 +212,13 @@ async function main() {
     const query = Query.create(
       `INSERT INTO products (id, name, price, stock, category)
        VALUES (:id, :name, :price, :stock, :category)`,
-      product
+      {
+        id: product.id.toString(),
+        name: product.name,
+        price: product.price,
+        stock: product.stock,
+        category: product.category,
+      }
     )
 
     if (!query.isError) {

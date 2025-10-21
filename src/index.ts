@@ -22,6 +22,11 @@ export type { MigrationModule } from "./migrations/migration-runner.ts"
 export { Ulid, NanoId } from "./id/index.ts"
 export type { Id, IdGenerationOptions } from "./id/index.ts"
 
+// Zeit exports
+export { Zeit, ZeitFactory, Period } from "./zeit/index.ts"
+export type { BillingInterval, CycleOptions, Duration, IPeriod } from "./zeit/index.ts"
+export { Timezone } from "./zeit/index.ts"
+
 // Type exports
 export type {
   Result,

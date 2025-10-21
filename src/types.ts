@@ -77,8 +77,9 @@ export interface MigrationRunnerOptions {
 
 /**
  * Generic entity ID type
+ * Supports string, number, and any object with toString() method (e.g., branded IDs)
  */
-export type EntityId = string | number
+export type EntityId = string | number | { toString(): string }
 
 /**
  * Row mapper function for repositories

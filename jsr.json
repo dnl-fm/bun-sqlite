@@ -8,6 +8,7 @@
     "./config": "./src/core/database-config.ts",
     "./query": "./src/query/query.ts",
     "./repository": "./src/repository/base-repository.ts",
-    "./migrations": "./src/migrations/migration-runner.ts"
+    "./migrations": "./src/migrations/migration-runner.ts",
+    "./zeit": "./src/zeit/index.ts"
   }
 }
