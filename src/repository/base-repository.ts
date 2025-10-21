@@ -330,6 +330,62 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
   }
 
   /**
+   * Execute insert query with ID validation
+   * Ensures that the query includes a non-empty 'id' parameter
+   * @param query Query value object (INSERT statement with :id parameter)
+   * @returns Result with number of inserted rows or error
+   *
+   * @example
+   * const query = Query.create(
+   *   'INSERT INTO users (id, email, name) VALUES (:id, :email, :name)',
+   *   { id: 'user_123abc', email: 'user@example.com', name: 'John' }
+   * )
+   * const result = userRepo.insertWithId(query.value)
+   */
+  insertWithId(query: Query): Result<number> {
+    // Validate that ID is present and non-empty
+    const idValidation = this.validateIdField(query)
+    if (idValidation.isError) {
+      return idValidation
+    }
+
+    // Proceed with insert
+    return this.insert(query)
+  }
+
+  /**
+   * Validate that a query includes a non-empty 'id' field
+   * @protected
+   */
+  protected validateIdField(query: Query): Result<void> {
+    try {
+      const namedParams = query.getNamedParams()
+
+      if (!("id" in namedParams)) {
+        return {
+          isError: true,
+          error: "Missing required parameter: id",
+        }
+      }
+
+      const id = namedParams.id
+      if (id === null || id === undefined || id === "") {
+        return {
+          isError: true,
+          error: "ID field cannot be null, undefined, or empty",
+        }
+      }
+
+      return { isError: false, value: undefined }
+    } catch (error) {
+      return {
+        isError: true,
+        error: `Failed to validate ID field: ${error}`,
+      }
+    }
+  }
+
+  /**
    * Begin transaction
    * Use with caution - ensure you commit or rollback
    */

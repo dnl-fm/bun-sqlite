@@ -3,7 +3,7 @@
  * Demonstrates core features: Database, Query, and Repository patterns
  */
 
-import { Database, Query, BaseRepository } from "../src/index.ts"
+import { Database, Query, BaseRepository, Ulid } from "../src/index.ts"
 
 // ============================================================================
 // STEP 1: Create a simple entity
@@ -107,8 +107,11 @@ async function main() {
   // ========================================================================
 
   // Create a user using Query value object
+  // Generate a unique ID using ULID with prefix
+  const userId = Ulid.create({ prefix: "user_" }).toString()
+
   const user: User = {
-    id: "user-1",
+    id: userId,
     email: "alice@example.com",
     name: "Alice",
     createdAt: Date.now(),
@@ -125,7 +128,7 @@ async function main() {
   // Find user by ID
   // ========================================================================
 
-  const findResult = userRepo.findById("user-1")
+  const findResult = userRepo.findById(userId)
   if (!findResult.isError && findResult.value) {
     console.log("✓ Found user:", findResult.value.name)
   }
@@ -154,7 +157,7 @@ async function main() {
 
   const updateQuery = Query.create(
     "UPDATE users SET name = :name WHERE id = :id",
-    { name: "Alice Smith", id: "user-1" }
+    { name: "Alice Smith", id: userId }
   )
 
   if (!updateQuery.isError) {

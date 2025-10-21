@@ -6,6 +6,7 @@ A modern SQLite abstraction layer for Bun with type-safe repositories, named pla
 
 ✅ **Named Placeholder Queries** - Type-safe query builder with `:paramName` syntax
 ✅ **Type-Safe Repositories** - Generic `BaseRepository` with full CRUD operations
+✅ **ID Generation** - ULID (time-sortable) and NanoID support with prefixes
 ✅ **Migration System** - Track and manage database schema changes
 ✅ **Singleton Pattern** - Efficient database connection management
 ✅ **Result Pattern** - No exceptions, all operations return Result types
@@ -127,6 +128,86 @@ Run examples with:
 bun run examples/01-basic-usage.ts
 bun run examples/02-migrations.ts
 bun run examples/03-advanced-queries.ts
+```
+
+## ID Generation
+
+Generate unique, reliable entity identifiers without relying on SQLite auto-increment. Choose between ULID (time-sortable) or NanoID (compact).
+
+### ULID - Universally Unique Lexicographically Sortable Identifier
+
+Time-ordered, cryptographically random IDs suitable for most use cases:
+
+```typescript
+import { Ulid } from "@dnl-fm/bun-sqlite"
+
+// Generate ULID with prefix
+const userId = Ulid.create({ prefix: "user_" }).toString()
+// Result: user_01ARZ3NDEKTSV4RRFFQ69G5FAV
+
+// Parse existing ULID
+const result = Ulid.fromString("user_01ARZ3NDEKTSV4RRFFQ69G5FAV")
+if (!result.isError) {
+  const ulid = result.value
+  const timestamp = ulid.getTimestamp() // Get creation time
+}
+```
+
+**Benefits:**
+- ✅ Time-sortable (lexicographically sorted by creation time)
+- ✅ Cryptographically random (26 characters)
+- ✅ Prefix support (`user_`, `post_`, `message_`, etc.)
+- ✅ Extract timestamp from ID without database query
+
+### NanoID - Compact URL-Safe Identifier
+
+Smaller, simpler alternative when you don't need time-sorting:
+
+```typescript
+import { NanoId } from "@dnl-fm/bun-sqlite"
+
+// Generate NanoID with prefix
+const postId = NanoId.create({ prefix: "post_" }).toString()
+// Result: post_V1StGXR8_Z5jdHi6B-myT
+
+// Customize length
+const shortId = NanoId.create({ prefix: "id_", length: 12 }).toString()
+// Result: id_a1B2c3D4e5F6
+
+// Parse existing NanoID
+const result = NanoId.fromString("post_V1StGXR8_Z5jdHi6B-myT")
+if (!result.isError) {
+  const nanoid = result.value
+  const prefix = nanoid.getPrefix()
+}
+```
+
+**Benefits:**
+- ✅ Compact (default 21 characters)
+- ✅ URL-safe characters
+- ✅ Customizable length
+- ✅ Cryptographically random
+
+### ID Validation in Repositories
+
+Enforce that all inserted entities have IDs:
+
+```typescript
+// Using insertWithId() for strict ID validation
+const query = Query.create(
+  "INSERT INTO users (id, name) VALUES (:id, :name)",
+  { id: userId, name: "Alice" }
+)
+
+if (!query.isError) {
+  const result = userRepo.insertWithId(query.value)
+  if (result.isError) {
+    console.error("Missing or invalid ID:", result.error)
+  }
+}
+
+// Backward compatible - insert() works without validation
+const result = userRepo.insert(query.value)
 ```
 
 ## API Documentation

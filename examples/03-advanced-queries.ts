@@ -3,7 +3,7 @@
  * Demonstrates complex queries, transactions, and repository patterns
  */
 
-import { Database, Query, BaseRepository } from "../src/index.ts"
+import { Database, Query, BaseRepository, Ulid } from "../src/index.ts"
 
 // ============================================================================
 // STEP 1: Define entities and repository
@@ -163,42 +163,42 @@ async function main() {
 
   const sampleProducts: Product[] = [
     {
-      id: "p1",
+      id: Ulid.create({ prefix: "product_" }).toString(),
       name: "Laptop",
       price: 999.99,
       stock: 5,
       category: "Electronics",
     },
     {
-      id: "p2",
+      id: Ulid.create({ prefix: "product_" }).toString(),
       name: "Mouse",
       price: 29.99,
       stock: 50,
       category: "Electronics",
     },
     {
-      id: "p3",
+      id: Ulid.create({ prefix: "product_" }).toString(),
       name: "Keyboard",
       price: 79.99,
       stock: 30,
       category: "Electronics",
     },
     {
-      id: "p4",
+      id: Ulid.create({ prefix: "product_" }).toString(),
       name: "Chair",
       price: 199.99,
       stock: 2,
       category: "Furniture",
     },
     {
-      id: "p5",
+      id: Ulid.create({ prefix: "product_" }).toString(),
       name: "Desk",
       price: 399.99,
       stock: 1,
       category: "Furniture",
     },
     {
-      id: "p6",
+      id: Ulid.create({ prefix: "product_" }).toString(),
       name: "Monitor",
       price: 299.99,
       stock: 8,
