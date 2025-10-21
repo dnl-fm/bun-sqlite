@@ -1,0 +1,47 @@
+{
+  "name": "@dnl-fm/bun-sqlite",
+  "version": "0.1.0",
+  "description": "SQLite abstraction for Bun with migrations, named placeholders, and type-safe repositories",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "test": "bun test tests/",
+    "test:watch": "bun test --watch tests/",
+    "type-check": "tsc --noEmit --project tsconfig.build.json",
+    "lint": "biome lint src/",
+    "lint:fix": "biome lint --fix src/",
+    "format": "biome format src/ --check",
+    "format:fix": "biome format src/ --write",
+    "check:all": "bun run lint && bun run test",
+    "build": "tsc --project tsconfig.build.json && bun build src/index.ts --outdir dist --target bun",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "bun",
+    "sqlite",
+    "database",
+    "migration",
+    "typescript",
+    "query",
+    "repository",
+    "jsr"
+  ],
+  "author": "@dnl-fm",
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.6",
+    "typescript": "^5.9"
+  }
+}

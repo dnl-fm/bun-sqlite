@@ -1,0 +1,13 @@
+{
+  "name": "@dnl-fm/bun-sqlite",
+  "version": "0.1.0",
+  "description": "SQLite abstraction for Bun with migrations, named placeholders, and type-safe repositories",
+  "exports": {
+    ".": "./src/index.ts",
+    "./database": "./src/core/database.ts",
+    "./config": "./src/core/database-config.ts",
+    "./query": "./src/query/query.ts",
+    "./repository": "./src/repository/base-repository.ts",
+    "./migrations": "./src/migrations/migration-runner.ts"
+  }
+}
