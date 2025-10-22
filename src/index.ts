@@ -43,7 +43,6 @@ export type {
   RunResult,
   Migration,
   AppliedMigration,
-  MigrationRunnerOptions,
   EntityId,
   RowMapper,
 } from "./types.ts"

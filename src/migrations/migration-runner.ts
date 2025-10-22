@@ -149,7 +149,9 @@ export class MigrationRunner {
       }
 
       // Get the last applied migration (reverse order)
-      const lastVersion = appliedVersions[appliedVersions.length - 1]
+      // Safe to access since we've checked length > 0
+      const lastIndex = appliedVersions.length - 1
+      const lastVersion = appliedVersions[lastIndex] as string
       const result = await this.rollbackMigration(lastVersion)
 
       if (result.isError) {
