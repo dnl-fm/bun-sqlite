@@ -463,12 +463,8 @@ const result = Query.create(sql: string, params?: Record<string, unknown>)
 const result = Query.simple(sql: string)
 
 // Query methods
-query.getSql(): string                                    // SQL with :paramName syntax
-query.getParams(): Record<string, unknown>               // Parameters object
-query.hasParams(): boolean
-query.validate(): Result<void>
-query.bind(param: string, value: unknown): Result<Query> // Rebind parameter
-query.withParams(params: Record<string, unknown>): Result<Query> // Replace all params
+query.getSql(): string                          // SQL with :paramName syntax
+query.getParams(): Record<string, unknown>     // Parameters object
 ```
 
 ### BaseRepository

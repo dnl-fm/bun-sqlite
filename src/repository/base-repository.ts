@@ -45,7 +45,7 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
       }
 
       const stmt = this.connection.prepare(queryResult.value.getSql())
-      const row = stmt.get(...queryResult.value.getParams())
+      const row = stmt.get(queryResult.value.getParams())
 
       if (!row) {
         return { isError: false, value: null }
@@ -359,16 +359,16 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
    */
   protected validateIdField(query: Query): Result<void> {
     try {
-      const namedParams = query.getNamedParams()
+      const params = query.getParams()
 
-      if (!("id" in namedParams)) {
+      if (!("id" in params)) {
         return {
           isError: true,
           error: "Missing required parameter: id",
         }
       }
 
-      const id = namedParams.id
+      const id = params.id
       if (id === null || id === undefined || id === "") {
         return {
           isError: true,

@@ -1,6 +1,6 @@
 /**
  * Comprehensive tests for Query value object
- * Tests named placeholder support, validation, and parameter binding
+ * Tests named placeholder support and parameter binding
  */
 
 import { describe, test, expect } from "bun:test"
@@ -20,12 +20,7 @@ describe("Query", () => {
       // Assert
       const query = assertSuccess(result)
       expect(query.getSql()).toBe(sql)
-      expect(query.getPositionalSql()).toBe("SELECT * FROM users WHERE email = ?")
-      expect(query.getParams()).toEqual(["alice@example.com"])
-      expect(query.getNamedParams()).toEqual({ email: "alice@example.com" })
-      expect(query.getPlaceholders()).toEqual(["email"])
-      expect(query.hasParams()).toBe(true)
-      expect(query.getParamCount()).toBe(1)
+      expect(query.getParams()).toEqual({ email: "alice@example.com" })
     })
 
     test("should create query with multiple named placeholders", () => {
@@ -40,14 +35,7 @@ describe("Query", () => {
       // Assert
       const query = assertSuccess(result)
       expect(query.getSql()).toBe(sql)
-      expect(query.getPositionalSql()).toBe(
-        "SELECT * FROM users WHERE email = ? AND status = ? AND id = ?"
-      )
-      expect(query.getParams()).toEqual(["bob@example.com", "active", "user-123"])
-      expect(query.getNamedParams()).toEqual(params)
-      expect(query.getPlaceholders()).toEqual(["email", "status", "id"])
-      expect(query.hasParams()).toBe(true)
-      expect(query.getParamCount()).toBe(3)
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should create query with underscore in placeholder names", () => {
@@ -60,8 +48,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["last_login", "user_id"])
-      expect(query.getParams()).toEqual([params.last_login, "user-456"])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should create query with numbers in placeholder names", () => {
@@ -74,8 +61,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["field1", "field2"])
-      expect(query.getParams()).toEqual(["value1", "value2"])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should create query with various data types", () => {
@@ -94,8 +80,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(["Test Record", 42, true, null])
-      expect(query.getNamedParams()).toEqual(params)
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should create query with complex WHERE clause", () => {
@@ -113,10 +98,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPositionalSql()).toBe(
-        "SELECT * FROM users WHERE (email = ? OR username = ?) AND status = ?"
-      )
-      expect(query.getParams()).toEqual(["test@example.com", "testuser", "active"])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should create query with IN clause", () => {
@@ -129,8 +111,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPositionalSql()).toBe("SELECT * FROM users WHERE id IN (?, ?, ?)")
-      expect(query.getParams()).toEqual(["user-1", "user-2", "user-3"])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should create query with JOIN and multiple conditions", () => {
@@ -148,8 +129,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["status", "created_at"])
-      expect(query.hasParams()).toBe(true)
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle empty params object for query with no placeholders", () => {
@@ -162,10 +142,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual([])
-      expect(query.getParams()).toEqual([])
-      expect(query.hasParams()).toBe(false)
-      expect(query.getParamCount()).toBe(0)
+      expect(query.getParams()).toEqual({})
     })
 
     test("should handle undefined params for query with no placeholders", () => {
@@ -177,9 +154,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual([])
-      expect(query.getParams()).toEqual([])
-      expect(query.hasParams()).toBe(false)
+      expect(query.getParams()).toEqual({})
     })
   })
 
@@ -194,12 +169,7 @@ describe("Query", () => {
       // Assert
       const query = assertSuccess(result)
       expect(query.getSql()).toBe(sql)
-      expect(query.getPositionalSql()).toBe(sql)
-      expect(query.getParams()).toEqual([])
-      expect(query.getNamedParams()).toEqual({})
-      expect(query.getPlaceholders()).toEqual([])
-      expect(query.hasParams()).toBe(false)
-      expect(query.getParamCount()).toBe(0)
+      expect(query.getParams()).toEqual({})
     })
 
     test("should create simple query with WHERE clause using literal values", () => {
@@ -212,7 +182,7 @@ describe("Query", () => {
       // Assert
       const query = assertSuccess(result)
       expect(query.getSql()).toBe(sql)
-      expect(query.hasParams()).toBe(false)
+      expect(query.getParams()).toEqual({})
     })
 
     test("should create simple COUNT query", () => {
@@ -225,7 +195,7 @@ describe("Query", () => {
       // Assert
       const query = assertSuccess(result)
       expect(query.getSql()).toBe(sql)
-      expect(query.hasParams()).toBe(false)
+      expect(query.getParams()).toEqual({})
     })
 
     test("should reject simple query with colon (potential placeholder)", () => {
@@ -406,115 +376,6 @@ describe("Query", () => {
     })
   })
 
-  describe("Placeholder extraction and conversion", () => {
-    test("should preserve placeholder order in positional params", () => {
-      // Arrange
-      const sql =
-        "UPDATE users SET name = :name, email = :email, status = :status WHERE id = :id"
-      const params = {
-        name: "Alice",
-        email: "alice@example.com",
-        status: "active",
-        id: "user-123",
-      }
-
-      // Act
-      const result = Query.create(sql, params)
-
-      // Assert
-      const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["name", "email", "status", "id"])
-      expect(query.getParams()).toEqual([
-        "Alice",
-        "alice@example.com",
-        "active",
-        "user-123",
-      ])
-      expect(query.getPositionalSql()).toBe(
-        "UPDATE users SET name = ?, email = ?, status = ? WHERE id = ?"
-      )
-    })
-
-    test("should handle placeholders in different SQL contexts", () => {
-      // Arrange
-      const sql = `
-        INSERT INTO logs (user_id, action, timestamp)
-        VALUES (:user_id, :action, :timestamp)
-      `
-      const params = {
-        user_id: "user-456",
-        action: "login",
-        timestamp: Date.now(),
-      }
-
-      // Act
-      const result = Query.create(sql, params)
-
-      // Assert
-      const query = assertSuccess(result)
-      const positionalSql = query.getPositionalSql()
-      expect(positionalSql).toContain("VALUES (?, ?, ?)")
-      expect(query.getParams()).toEqual([
-        "user-456",
-        "login",
-        params.timestamp,
-      ])
-    })
-
-    test("should handle placeholders adjacent to SQL keywords", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email=:email AND status=:status"
-      const params = { email: "test@example.com", status: "active" }
-
-      // Act
-      const result = Query.create(sql, params)
-
-      // Assert
-      const query = assertSuccess(result)
-      expect(query.getPositionalSql()).toBe(
-        "SELECT * FROM users WHERE email=? AND status=?"
-      )
-      expect(query.getParams()).toEqual(["test@example.com", "active"])
-    })
-
-    test("should handle placeholders with parentheses", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE (email = :email) AND (status = :status)"
-      const params = { email: "test@example.com", status: "active" }
-
-      // Act
-      const result = Query.create(sql, params)
-
-      // Assert
-      const query = assertSuccess(result)
-      expect(query.getPositionalSql()).toBe(
-        "SELECT * FROM users WHERE (email = ?) AND (status = ?)"
-      )
-    })
-
-    test("should handle placeholders in CASE expressions", () => {
-      // Arrange
-      const sql = `
-        SELECT
-          CASE
-            WHEN status = :active THEN 'Active'
-            WHEN status = :inactive THEN 'Inactive'
-            ELSE 'Unknown'
-          END as status_label
-        FROM users
-      `
-      const params = { active: "active", inactive: "inactive" }
-
-      // Act
-      const result = Query.create(sql, params)
-
-      // Assert
-      const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["active", "inactive"])
-      expect(query.getParams()).toEqual(["active", "inactive"])
-    })
-  })
-
   describe("Edge cases", () => {
     test("should handle empty SQL string", () => {
       // Arrange
@@ -526,7 +387,7 @@ describe("Query", () => {
       // Assert
       const query = assertSuccess(result)
       expect(query.getSql()).toBe("")
-      expect(query.hasParams()).toBe(false)
+      expect(query.getParams()).toEqual({})
     })
 
     test("should handle SQL with only whitespace", () => {
@@ -556,7 +417,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["email", "status"])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle SQL comments with placeholders", () => {
@@ -574,7 +435,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["email", "status"])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle SQL with block comments", () => {
@@ -595,9 +456,9 @@ describe("Query", () => {
       if (result.isError) {
         expect(result.error).toContain("Extra parameters:")
       } else {
-        // If implementation improves to skip comments, both placeholders would be found
+        // If implementation improves to skip comments, email param would be found
         const query = result.value
-        expect(query.getPlaceholders().length).toBeGreaterThan(0)
+        expect(query.getParams()).toBeDefined()
       }
     })
 
@@ -611,7 +472,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(["test+tag@example.com"])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle Unicode in parameter values", () => {
@@ -624,7 +485,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(["Müller José 日本語"])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle SQL injection attempt in placeholder", () => {
@@ -638,8 +499,7 @@ describe("Query", () => {
       // Assert
       const query = assertSuccess(result)
       // Value is safely parameterized
-      expect(query.getParams()).toEqual(["'; DROP TABLE users; --"])
-      expect(query.getPositionalSql()).toBe("SELECT * FROM users WHERE email = ?")
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle very long SQL query", () => {
@@ -653,8 +513,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["email"])
-      expect(query.getSql()).toContain("col49")
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle parameter value as empty string", () => {
@@ -667,7 +526,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual([""])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle parameter value as zero", () => {
@@ -680,7 +539,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual([0])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle parameter value as false", () => {
@@ -693,297 +552,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual([false])
-    })
-  })
-
-  describe("bind() - Parameter rebinding", () => {
-    test("should bind new value to existing placeholder", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email AND status = :status"
-      const params = { email: "alice@example.com", status: "active" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const result = query.bind("email", "bob@example.com")
-
-      // Assert
-      const newQuery = assertSuccess(result)
-      expect(newQuery.getParams()).toEqual(["bob@example.com", "active"])
-      expect(newQuery.getNamedParams()).toEqual({
-        email: "bob@example.com",
-        status: "active",
-      })
-      // Original query unchanged
-      expect(query.getParams()).toEqual(["alice@example.com", "active"])
-    })
-
-    test("should fail to bind to non-existent placeholder", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email"
-      const params = { email: "test@example.com" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const result = query.bind("status", "active")
-
-      // Assert
-      const error = assertError(result)
-      expect(error).toBe("Parameter status not found in query")
-    })
-
-    test("should bind multiple values sequentially", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email AND status = :status"
-      const params = { email: "alice@example.com", status: "active" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const result1 = query.bind("email", "bob@example.com")
-      const query2 = assertSuccess(result1)
-      const result2 = query2.bind("status", "inactive")
-
-      // Assert
-      const finalQuery = assertSuccess(result2)
-      expect(finalQuery.getParams()).toEqual(["bob@example.com", "inactive"])
-    })
-
-    test("should bind null value", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email"
-      const params = { email: "test@example.com" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const result = query.bind("email", null)
-
-      // Assert
-      const newQuery = assertSuccess(result)
-      expect(newQuery.getParams()).toEqual([null])
-    })
-
-    test("should bind undefined value", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email"
-      const params = { email: "test@example.com" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const result = query.bind("email", undefined)
-
-      // Assert
-      const newQuery = assertSuccess(result)
-      expect(newQuery.getParams()).toEqual([undefined])
-    })
-  })
-
-  describe("withParams() - Parameter replacement", () => {
-    test("should replace all parameters with new values", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email AND status = :status"
-      const params = { email: "alice@example.com", status: "active" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const newParams = { email: "bob@example.com", status: "inactive" }
-      const result = query.withParams(newParams)
-
-      // Assert
-      const newQuery = assertSuccess(result)
-      expect(newQuery.getParams()).toEqual(["bob@example.com", "inactive"])
-      expect(newQuery.getNamedParams()).toEqual(newParams)
-      // Original unchanged
-      expect(query.getParams()).toEqual(["alice@example.com", "active"])
-    })
-
-    test("should fail when new params are missing required placeholders", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email AND status = :status"
-      const params = { email: "alice@example.com", status: "active" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const newParams = { email: "bob@example.com" }
-      const result = query.withParams(newParams)
-
-      // Assert
-      const error = assertError(result)
-      expect(error).toBe("Missing parameters: status")
-    })
-
-    test("should fail when new params have extra parameters", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email"
-      const params = { email: "alice@example.com" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const newParams = { email: "bob@example.com", status: "active", id: "123" }
-      const result = query.withParams(newParams)
-
-      // Assert
-      const error = assertError(result)
-      expect(error).toContain("Extra parameters:")
-    })
-
-    test("should allow query reuse with different parameter sets", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email"
-      const query = assertSuccess(Query.create(sql, { email: "user1@example.com" }))
-
-      // Act & Assert - Execute with different params
-      const query2 = assertSuccess(query.withParams({ email: "user2@example.com" }))
-      expect(query2.getParams()).toEqual(["user2@example.com"])
-
-      const query3 = assertSuccess(query.withParams({ email: "user3@example.com" }))
-      expect(query3.getParams()).toEqual(["user3@example.com"])
-
-      // Original unchanged
-      expect(query.getParams()).toEqual(["user1@example.com"])
-    })
-  })
-
-  describe("validate() - SQL validation", () => {
-    test("should validate query with correct SQL", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email"
-      const params = { email: "test@example.com" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const result = query.validate()
-
-      // Assert
-      expect(result.isError).toBe(false)
-    })
-
-    test("should detect unclosed single quote", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE name = 'John"
-      const query = assertSuccess(Query.simple(sql))
-
-      // Act
-      const result = query.validate()
-
-      // Assert
-      const error = assertError(result)
-      expect(error).toBe("Unclosed single quote in SQL")
-    })
-
-    test("should detect unclosed double quote", () => {
-      // Arrange
-      const sql = 'SELECT * FROM users WHERE name = "John'
-      const query = assertSuccess(Query.simple(sql))
-
-      // Act
-      const result = query.validate()
-
-      // Assert
-      const error = assertError(result)
-      expect(error).toBe("Unclosed double quote in SQL")
-    })
-
-    test("should pass validation with properly closed quotes", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE name = 'John' AND email = \"test@example.com\""
-      const query = assertSuccess(Query.simple(sql))
-
-      // Act
-      const result = query.validate()
-
-      // Assert
-      expect(result.isError).toBe(false)
-    })
-
-    test("should pass validation with multiple pairs of quotes", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE name = 'John' OR name = 'Jane'"
-      const query = assertSuccess(Query.simple(sql))
-
-      // Act
-      const result = query.validate()
-
-      // Assert
-      expect(result.isError).toBe(false)
-    })
-
-    test("should have even quotes with SQL escaped quotes", () => {
-      // Arrange
-      // Note: 'O''Brien' has 4 single quotes total (2 pairs), which is even
-      const sql = "SELECT * FROM users WHERE name = 'O''Brien'"
-      const query = assertSuccess(Query.simple(sql))
-
-      // Act
-      const result = query.validate()
-
-      // Assert
-      // The validator counts quotes: 'O''Brien' = 4 quotes (even number)
-      // So validation passes even though it's escaped syntax
-      expect(result.isError).toBe(false)
-    })
-
-    test("should pass validation for query without quotes", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE id = :id"
-      const params = { id: 123 }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const result = query.validate()
-
-      // Assert
-      expect(result.isError).toBe(false)
-    })
-  })
-
-  describe("debug() - Debug information", () => {
-    test("should return complete debug information", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email AND status = :status"
-      const params = { email: "test@example.com", status: "active" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const debug = query.debug()
-
-      // Assert
-      expect(debug).toEqual({
-        sql: sql,
-        namedParams: { email: "test@example.com", status: "active" },
-        positionalParams: ["test@example.com", "active"],
-        placeholders: ["email", "status"],
-      })
-    })
-
-    test("should return debug info for simple query", () => {
-      // Arrange
-      const sql = "SELECT * FROM users"
-      const query = assertSuccess(Query.simple(sql))
-
-      // Act
-      const debug = query.debug()
-
-      // Assert
-      expect(debug).toEqual({
-        sql: sql,
-        namedParams: {},
-        positionalParams: [],
-        placeholders: [],
-      })
-    })
-
-    test("should show updated values after bind", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email"
-      const query = assertSuccess(Query.create(sql, { email: "old@example.com" }))
-      const newQuery = assertSuccess(query.bind("email", "new@example.com"))
-
-      // Act
-      const debug = newQuery.debug()
-
-      // Assert
-      expect(debug.namedParams).toEqual({ email: "new@example.com" })
-      expect(debug.positionalParams).toEqual(["new@example.com"])
+      expect(query.getParams()).toEqual(params)
     })
   })
 
@@ -996,44 +565,12 @@ describe("Query", () => {
 
       // Act
       const params1 = query.getParams()
-      params1.push("extra-value")
+      params1.status = "active"
       const params2 = query.getParams()
 
       // Assert
-      expect(params2).toEqual(["test@example.com"])
-      expect(params2.length).toBe(1)
-    })
-
-    test("getNamedParams() should return a copy, not reference", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email"
-      const params = { email: "test@example.com" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const namedParams1 = query.getNamedParams()
-      namedParams1.status = "active"
-      const namedParams2 = query.getNamedParams()
-
-      // Assert
-      expect(namedParams2).toEqual({ email: "test@example.com" })
-      expect("status" in namedParams2).toBe(false)
-    })
-
-    test("getPlaceholders() should return a copy, not reference", () => {
-      // Arrange
-      const sql = "SELECT * FROM users WHERE email = :email"
-      const params = { email: "test@example.com" }
-      const query = assertSuccess(Query.create(sql, params))
-
-      // Act
-      const placeholders1 = query.getPlaceholders()
-      placeholders1.push("status")
-      const placeholders2 = query.getPlaceholders()
-
-      // Assert
-      expect(placeholders2).toEqual(["email"])
-      expect(placeholders2.length).toBe(1)
+      expect(params2).toEqual({ email: "test@example.com" })
+      expect("status" in params2).toBe(false)
     })
   })
 
@@ -1053,8 +590,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["email"])
-      expect(query.getParams()).toEqual(["user@example.com"])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle pagination query", () => {
@@ -1072,8 +608,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["user_id", "limit", "offset"])
-      expect(query.getParams()).toEqual(["user-123", 10, 0])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle search query with LIKE (using separate placeholders)", () => {
@@ -1092,8 +627,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["search1", "search2", "status"])
-      expect(query.getParams()).toEqual(["%john%", "%john%", "active"])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle batch insert query", () => {
@@ -1114,8 +648,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["id", "email", "name", "created_at"])
-      expect(query.getParamCount()).toBe(4)
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle update with multiple conditions", () => {
@@ -1141,14 +674,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual([
-        "name",
-        "email",
-        "updated_at",
-        "id",
-        "status",
-      ])
-      expect(query.getParamCount()).toBe(5)
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle delete with conditions", () => {
@@ -1165,7 +691,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["user_id", "expires_at"])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle aggregate query with GROUP BY", () => {
@@ -1184,8 +710,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["status", "min_count"])
-      expect(query.getParams()).toEqual(["published", 5])
+      expect(query.getParams()).toEqual(params)
     })
 
     test("should handle subquery with parameters", () => {
@@ -1205,7 +730,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getPlaceholders()).toEqual(["status", "created_at"])
+      expect(query.getParams()).toEqual(params)
     })
   })
 

@@ -13,22 +13,13 @@ import type { Result } from "../types.ts"
 export class Query {
   private sql: string
   private params: Record<string, unknown>
-  private positionalParams: unknown[]
-  private placeholders: string[]
 
   /**
    * Private constructor - use create() instead
    */
-  private constructor(
-    sql: string,
-    params: Record<string, unknown>,
-    placeholders: string[],
-    positionalParams: unknown[]
-  ) {
+  private constructor(sql: string, params: Record<string, unknown>) {
     this.sql = sql
     this.params = params
-    this.placeholders = placeholders
-    this.positionalParams = positionalParams
   }
 
   /**
@@ -81,12 +72,9 @@ export class Query {
         }
       }
 
-      // Convert named placeholders to positional parameters for Bun's SQLite API
-      const positionalParams = uniquePlaceholders.map(p => providedParams[p])
-
       return {
         isError: false,
-        value: new Query(sql, providedParams, uniquePlaceholders, positionalParams),
+        value: new Query(sql, providedParams),
       }
     } catch (error) {
       return {
@@ -114,7 +102,7 @@ export class Query {
 
       return {
         isError: false,
-        value: new Query(sql, {}, [], []),
+        value: new Query(sql, {}),
       }
     } catch (error) {
       return {
@@ -133,116 +121,11 @@ export class Query {
   }
 
   /**
-   * Get the SQL converted to positional placeholders
-   * @returns SQL string with ? placeholders
-   */
-  getPositionalSql(): string {
-    return this.getSql().replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, "?")
-  }
-
-  /**
-   * Get parameters as array in positional order
-   * Used with Bun's SQLite API for parameter binding
-   * @returns Array of parameter values in placeholder order
-   */
-  getParams(): unknown[] {
-    return [...this.positionalParams]
-  }
-
-  /**
-   * Get parameters as an object (named)
+   * Get parameters as an object with named placeholders
+   * Use with Bun's SQLite API: stmt.get(query.getParams())
    * @returns Object with parameter names and values
    */
-  getNamedParams(): Record<string, unknown> {
+  getParams(): Record<string, unknown> {
     return { ...this.params }
-  }
-
-  /**
-   * Get placeholder names in order
-   */
-  getPlaceholders(): string[] {
-    return [...this.placeholders]
-  }
-
-  /**
-   * Check if query has parameters
-   */
-  hasParams(): boolean {
-    return this.placeholders.length > 0
-  }
-
-  /**
-   * Get parameter count
-   */
-  getParamCount(): number {
-    return this.placeholders.length
-  }
-
-  /**
-   * Bind additional value to a placeholder
-   * Returns new Query with updated binding
-   * @param param Placeholder name
-   * @param value Value to bind
-   */
-  bind(param: string, value: unknown): Result<Query> {
-    if (!this.placeholders.includes(param)) {
-      return {
-        isError: true,
-        error: `Parameter ${param} not found in query`,
-      }
-    }
-
-    const newParams = { ...this.params, [param]: value }
-    return Query.create(this.sql, newParams)
-  }
-
-  /**
-   * Create a new query with different parameters
-   * Useful for query reuse
-   * @param newParams New parameter values
-   */
-  withParams(newParams: Record<string, unknown>): Result<Query> {
-    return Query.create(this.sql, newParams)
-  }
-
-  /**
-   * Get debug information
-   */
-  debug(): object {
-    return {
-      sql: this.sql,
-      namedParams: this.params,
-      positionalParams: this.positionalParams,
-      placeholders: this.placeholders,
-    }
-  }
-
-  /**
-   * Validate query structure
-   * Checks that SQL is properly formed
-   */
-  validate(): Result<void> {
-    // Check for unclosed string literals
-    const singleQuotes = (this.sql.match(/'/g) || []).length
-    const doubleQuotes = (this.sql.match(/"/g) || []).length
-
-    if (singleQuotes % 2 !== 0) {
-      return {
-        isError: true,
-        error: "Unclosed single quote in SQL",
-      }
-    }
-
-    if (doubleQuotes % 2 !== 0) {
-      return {
-        isError: true,
-        error: "Unclosed double quote in SQL",
-      }
-    }
-
-    // Check for common SQL syntax errors is deferred to database execution
-    // which can handle most SQL variations correctly
-
-    return { isError: false, value: undefined }
   }
 }

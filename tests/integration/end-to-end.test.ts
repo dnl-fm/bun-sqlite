@@ -412,10 +412,10 @@ describe("Workflow 2: Named Placeholders + Repository", () => {
 
     const query = assertSuccess(queryResult)
 
-    // Verify parameter extraction
-    expect(query.hasParams()).toBe(true)
-    expect(query.getParamCount()).toBe(3)
-    expect(query.getPlaceholders()).toEqual(["id1", "id2", "id3"])
+    // Verify parameters exist
+    const params = query.getParams()
+    expect(Object.keys(params).length).toBe(3)
+    expect(Object.keys(params).sort()).toEqual(["id1", "id2", "id3"].sort())
 
     // Execute query
     const result = userRepo.findByQuery(query)
@@ -436,8 +436,11 @@ describe("Workflow 2: Named Placeholders + Repository", () => {
     const activeUsers = assertSuccess(activeResult)
     expect(activeUsers.length).toBe(3)
 
-    // Reuse with different parameters
-    const inactiveQueryResult = query.withParams({ status: "inactive" })
+    // Reuse with different parameters - create a new query
+    const inactiveQueryResult = Query.create(
+      "SELECT * FROM users WHERE status = :status ORDER BY id",
+      { status: "inactive" }
+    )
     const inactiveQuery = assertSuccess(inactiveQueryResult)
 
     const inactiveResult = userRepo.findByQuery(inactiveQuery)
@@ -763,21 +766,8 @@ describe("Workflow 4: Error Handling - Result Pattern", () => {
     }
   })
 
-  test("should handle unclosed string literals in query validation", () => {
-    // Query validation should catch syntax errors
-    const queryResult = Query.create(
-      `SELECT * FROM users WHERE name = 'Alice`,
-      {}
-    )
-
-    const query = assertSuccess(queryResult)
-    const validationResult = query.validate()
-
-    expect(validationResult.isError).toBe(true)
-    if (validationResult.isError) {
-      expect(validationResult.error).toContain("Unclosed single quote")
-    }
-  })
+  // Note: Query.validate() was removed in the API simplification
+  // Validation is now deferred to the database engine (SQLite) on execution
 })
 
 // ============================================================================
