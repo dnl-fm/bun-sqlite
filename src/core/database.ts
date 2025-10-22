@@ -95,8 +95,9 @@ export class Database {
         }
       }
 
-      // Open connection
-      const bunDb = new BunDatabase(this.path)
+      // Open connection with strict: true to use parameter names without prefixes
+      // When strict: true, you can bind parameters like {email: "test"} instead of {":email": "test"}
+      const bunDb = new BunDatabase(this.path, { strict: true })
       this.connection = createDatabaseConnection(bunDb)
 
       // Apply pragmas

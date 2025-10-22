@@ -29,7 +29,7 @@ describe("BaseRepository - insertWithId", () => {
   let repo: TestRepository
 
   beforeEach(() => {
-    const bunDb = new (require("bun:sqlite").Database)(":memory:")
+    const bunDb = new (require("bun:sqlite").Database)(":memory:", { strict: true })
     connection = createDatabaseConnection(bunDb)
 
     // Create test table

@@ -35,7 +35,7 @@ describe("Query", () => {
       // Assert
       const query = assertSuccess(result)
       expect(query.getSql()).toBe(sql)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ email: "bob@example.com", status: "active", id: "user-123" })
     })
 
     test("should create query with underscore in placeholder names", () => {
@@ -48,7 +48,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ last_login: params.last_login, user_id: params.user_id })
     })
 
     test("should create query with numbers in placeholder names", () => {
@@ -61,7 +61,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ field1: "value1", field2: "value2" })
     })
 
     test("should create query with various data types", () => {
@@ -80,7 +80,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ name: "Test Record", count: 42, active: true, data: null })
     })
 
     test("should create query with complex WHERE clause", () => {
@@ -98,7 +98,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ email: "test@example.com", username: "testuser", status: "active" })
     })
 
     test("should create query with IN clause", () => {
@@ -111,7 +111,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ id1: "user-1", id2: "user-2", id3: "user-3" })
     })
 
     test("should create query with JOIN and multiple conditions", () => {
@@ -129,7 +129,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ status: "active", created_at: params.created_at })
     })
 
     test("should handle empty params object for query with no placeholders", () => {
@@ -417,7 +417,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ email: "test@example.com", status: "active" })
     })
 
     test("should handle SQL comments with placeholders", () => {
@@ -435,7 +435,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ email: "test@example.com", status: "active" })
     })
 
     test("should handle SQL with block comments", () => {
@@ -472,7 +472,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ email: "test+tag@example.com" })
     })
 
     test("should handle Unicode in parameter values", () => {
@@ -485,7 +485,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ name: "Müller José 日本語" })
     })
 
     test("should handle SQL injection attempt in placeholder", () => {
@@ -499,7 +499,7 @@ describe("Query", () => {
       // Assert
       const query = assertSuccess(result)
       // Value is safely parameterized
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ email: "'; DROP TABLE users; --" })
     })
 
     test("should handle very long SQL query", () => {
@@ -513,7 +513,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ email: "test@example.com" })
     })
 
     test("should handle parameter value as empty string", () => {
@@ -526,7 +526,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ email: "" })
     })
 
     test("should handle parameter value as zero", () => {
@@ -539,7 +539,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ age: 0 })
     })
 
     test("should handle parameter value as false", () => {
@@ -552,7 +552,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ active: false })
     })
   })
 
@@ -590,7 +590,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ email: "user@example.com" })
     })
 
     test("should handle pagination query", () => {
@@ -608,7 +608,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ user_id: "user-123", limit: 10, offset: 0 })
     })
 
     test("should handle search query with LIKE (using separate placeholders)", () => {
@@ -627,7 +627,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ search1: searchTerm, search2: searchTerm, status: "active" })
     })
 
     test("should handle batch insert query", () => {
@@ -648,7 +648,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ id: "user-123", email: "test@example.com", name: "Test User", created_at: params.created_at })
     })
 
     test("should handle update with multiple conditions", () => {
@@ -674,7 +674,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ name: "Updated Name", email: "updated@example.com", updated_at: params.updated_at, id: "user-123", status: "active" })
     })
 
     test("should handle delete with conditions", () => {
@@ -691,7 +691,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ user_id: "user-123", expires_at: params.expires_at })
     })
 
     test("should handle aggregate query with GROUP BY", () => {
@@ -710,7 +710,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ status: "published", min_count: 5 })
     })
 
     test("should handle subquery with parameters", () => {
@@ -730,7 +730,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getParams()).toEqual(params)
+      expect(query.getParams()).toEqual({ status: "published", created_at: params.created_at })
     })
   })
 
