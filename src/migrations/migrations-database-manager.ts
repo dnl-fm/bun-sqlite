@@ -194,6 +194,36 @@ export class MigrationsDatabaseManager {
   }
 
   /**
+   * Remove a migration from the applied list (for rollback)
+   *
+   * @param version Migration version string to remove
+   * @returns Result indicating success or error
+   *
+   * @example
+   * const result = await manager.removeApplied("20251022T143045")
+   */
+  async removeApplied(version: string): Promise<Result<void>> {
+    try {
+      if (!this.connection) {
+        return {
+          isError: true,
+          error: "Migrations database not initialized. Call initialize() first.",
+        }
+      }
+
+      const stmt = this.connection.prepare("DELETE FROM _migrations_applied WHERE version = ?")
+      stmt.run(version)
+
+      return { isError: false, value: undefined }
+    } catch (error) {
+      return {
+        isError: true,
+        error: `Failed to remove applied migration: ${error}`,
+      }
+    }
+  }
+
+  /**
    * Close the migrations database connection
    *
    * Should be called before application shutdown to ensure

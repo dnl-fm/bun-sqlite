@@ -19,7 +19,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getOriginalSql()).toBe(sql)
+      expect(query.getSql()).toBe(sql)
       expect(query.getPositionalSql()).toBe("SELECT * FROM users WHERE email = ?")
       expect(query.getParams()).toEqual(["alice@example.com"])
       expect(query.getNamedParams()).toEqual({ email: "alice@example.com" })
@@ -39,7 +39,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getOriginalSql()).toBe(sql)
+      expect(query.getSql()).toBe(sql)
       expect(query.getPositionalSql()).toBe(
         "SELECT * FROM users WHERE email = ? AND status = ? AND id = ?"
       )
@@ -193,7 +193,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getOriginalSql()).toBe(sql)
+      expect(query.getSql()).toBe(sql)
       expect(query.getPositionalSql()).toBe(sql)
       expect(query.getParams()).toEqual([])
       expect(query.getNamedParams()).toEqual({})
@@ -211,7 +211,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getOriginalSql()).toBe(sql)
+      expect(query.getSql()).toBe(sql)
       expect(query.hasParams()).toBe(false)
     })
 
@@ -224,7 +224,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getOriginalSql()).toBe(sql)
+      expect(query.getSql()).toBe(sql)
       expect(query.hasParams()).toBe(false)
     })
 
@@ -525,7 +525,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getOriginalSql()).toBe("")
+      expect(query.getSql()).toBe("")
       expect(query.hasParams()).toBe(false)
     })
 
@@ -538,7 +538,7 @@ describe("Query", () => {
 
       // Assert
       const query = assertSuccess(result)
-      expect(query.getOriginalSql()).toBe(sql)
+      expect(query.getSql()).toBe(sql)
     })
 
     test("should handle SQL with line breaks", () => {
@@ -654,7 +654,7 @@ describe("Query", () => {
       // Assert
       const query = assertSuccess(result)
       expect(query.getPlaceholders()).toEqual(["email"])
-      expect(query.getOriginalSql()).toContain("col49")
+      expect(query.getSql()).toContain("col49")
     })
 
     test("should handle parameter value as empty string", () => {
@@ -948,8 +948,7 @@ describe("Query", () => {
 
       // Assert
       expect(debug).toEqual({
-        originalSql: sql,
-        positionalSql: "SELECT * FROM users WHERE email = ? AND status = ?",
+        sql: sql,
         namedParams: { email: "test@example.com", status: "active" },
         positionalParams: ["test@example.com", "active"],
         placeholders: ["email", "status"],
@@ -966,8 +965,7 @@ describe("Query", () => {
 
       // Assert
       expect(debug).toEqual({
-        originalSql: sql,
-        positionalSql: sql,
+        sql: sql,
         namedParams: {},
         positionalParams: [],
         placeholders: [],

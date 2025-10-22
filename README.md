@@ -2,21 +2,46 @@
 
 A modern SQLite abstraction layer for Bun with type-safe repositories, named placeholder queries, and built-in migration support. Designed for performance and developer experience.
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Setup](#setup)
+- [Quick Start](#quick-start)
+- [Timezone-Aware Dates with Zeit](#timezone-aware-dates-with-zeit)
+- [Type-Safe Value Objects](#type-safe-value-objects)
+- [Examples](#examples)
+- [ID Generation](#id-generation)
+  - [ULID](#ulid---universally-unique-lexicographically-sortable-identifier)
+  - [NanoID](#nanoid---compact-url-safe-identifier)
+  - [ID Validation](#id-validation-in-repositories)
+- [API Documentation](#api-documentation)
+  - [Database](#database)
+  - [Query](#query)
+  - [BaseRepository](#baserepository)
+  - [Migrations](#migrations)
+- [Configuration](#configuration)
+- [Error Handling](#error-handling)
+- [Development](#development)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Features
 
-✅ **Named Placeholder Queries** - Type-safe query builder with `:paramName` syntax
-✅ **Type-Safe Repositories** - Generic `BaseRepository` with full CRUD operations
-✅ **ID Generation** - ULID (time-sortable) and NanoID support with prefixes
-✅ **Timezone-Aware Dates** - Zeit module for timezone-safe datetime and billing cycles
-✅ **Migration System** - Track and manage database schema changes
-✅ **Singleton Pattern** - Efficient database connection management
-✅ **Result Pattern** - No exceptions, all operations return Result types
-✅ **Pragma Configuration** - Pre-configured for WAL mode, optimal sync settings
-✅ **Zero Dependencies** - Uses Bun's native SQLite
-✅ **TypeScript Strict Mode** - Full TypeScript 5.9+ support
-✅ **BiomeJS Linting** - Code quality and formatting enforced
-✅ **Comprehensive JSDoc** - Full type documentation
-✅ **90%+ Test Coverage** - Thoroughly tested
+- **Named Placeholder Queries** - Type-safe query builder with `:paramName` syntax
+- **Type-Safe Repositories** - Generic `BaseRepository` with full CRUD operations
+- **ID Generation** - ULID (time-sortable) and NanoID support with prefixes
+- **Timezone-Aware Dates** - Zeit module for timezone-safe datetime and billing cycles
+- **Migration System** - Track and manage database schema changes
+- **Singleton Pattern** - Efficient database connection management
+- **Result Pattern** - No exceptions, all operations return Result types
+- **Pragma Configuration** - Pre-configured for WAL mode, optimal sync settings
+- **Zero Dependencies** - Uses Bun's native SQLite
+- **TypeScript Strict Mode** - Full TypeScript 5.9+ support
+- **BiomeJS Linting** - Code quality and formatting enforced
+- **Comprehensive JSDoc** - Full type documentation
+- **90%+ Test Coverage** - Thoroughly tested
 
 ## Installation
 
@@ -30,6 +55,103 @@ npm install @dnl-fm/bun-sqlite
 # With yarn
 yarn add @dnl-fm/bun-sqlite
 ```
+
+## Setup
+
+### 1. Create Migrations Directory
+
+Create a dedicated folder for your migrations:
+
+```bash
+mkdir migrations
+```
+
+### 2. Configure Migration CLI
+
+Add migration commands to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "migrate": "bun ./node_modules/@dnl-fm/bun-sqlite/bin/migrate.ts",
+    "migrate:status": "bun ./node_modules/@dnl-fm/bun-sqlite/bin/migrate.ts status",
+    "migrate:generate": "bun ./node_modules/@dnl-fm/bun-sqlite/bin/migrate.ts generate"
+  }
+}
+```
+
+Now you can run migrations from the command line:
+
+```bash
+# Generate a new migration file
+bun migrate:generate create_users
+bun migrate:generate add_posts_table
+
+# Run pending migrations
+bun migrate
+
+# Check migration status
+bun migrate:status
+
+# Rollback the last applied migration
+bun migrate:down
+
+# Rollback a specific migration by version
+bun migrate:down 20251022T143045_create_users
+```
+
+The `migrate:generate` command creates a migration file with the correct ISO timestamp format and template.
+
+The `migrate:down` command requires a `down()` function in each migration file for rollback support.
+
+### 3. Configure Database Paths
+
+By default, the CLI looks for:
+- **App database**: `./data.db`
+- **Migrations dir**: `./migrations`
+- **Migrations tracking DB**: `./.migrations.db`
+
+You can customize these with environment variables:
+
+```bash
+# Use custom paths
+DATABASE_URL=./db/app.db \
+MIGRATIONS_DIR=./db/migrations \
+MIGRATIONS_DB_PATH=./db/.migrations.db \
+bun migrate
+```
+
+Or set in your `.env` file:
+
+```env
+# .env
+DATABASE_URL=./db/app.db
+MIGRATIONS_DIR=./db/migrations
+MIGRATIONS_DB_PATH=./db/.migrations.db
+```
+
+Then run:
+
+```bash
+bun migrate
+```
+
+### 4. Initialize Database in Application Code
+
+Your application initialization should only create the database connection. Migrations are handled via CLI:
+
+```typescript
+import { Database } from "@dnl-fm/bun-sqlite"
+
+// Initialize app database (migrations are run separately via CLI)
+const dbResult = await Database.getInstance("./data.db")
+if (dbResult.isError) throw new Error(dbResult.error)
+const db = dbResult.value
+
+// Use db.query(), repositories, etc.
+```
+
+This keeps migrations separate from application code, following standard CLI patterns used by Rails, Laravel, and Django.
 
 ## Quick Start
 
@@ -331,7 +453,7 @@ db.isConnected(): boolean
 
 ### Query
 
-Named placeholder queries with validation:
+Named placeholder queries with validation using Bun's native SQLite parameter support:
 
 ```typescript
 // Create with parameters
@@ -341,12 +463,12 @@ const result = Query.create(sql: string, params?: Record<string, unknown>)
 const result = Query.simple(sql: string)
 
 // Query methods
-query.getOriginalSql(): string
-query.getPositionalSql(): string
-query.getParams(): unknown[]
-query.getNamedParams(): Record<string, unknown>
+query.getSql(): string                                    // SQL with :paramName syntax
+query.getParams(): Record<string, unknown>               // Parameters object
 query.hasParams(): boolean
 query.validate(): Result<void>
+query.bind(param: string, value: unknown): Result<Query> // Rebind parameter
+query.withParams(params: Record<string, unknown>): Result<Query> // Replace all params
 ```
 
 ### BaseRepository
@@ -388,7 +510,7 @@ repo.commit(): void
 repo.rollback(): void
 ```
 
-### MigrationRunner & MigrationLoader
+### Migrations
 
 Modern versioned schema migrations with automatic discovery and separate tracking database.
 
@@ -434,49 +556,34 @@ export async function down(db: DatabaseConnection): Promise<void> {
 }
 ```
 
-#### Using MigrationLoader
+#### Running Migrations via CLI
 
-Automatically discover and load migrations from a directory:
+Use the provided CLI script to manage migrations (recommended):
 
-```typescript
-import { Database, MigrationLoader, MigrationRunner } from "@dnl-fm/bun-sqlite"
+```bash
+# Generate a new migration file
+bun migrate:generate create_users
+# Creates: migrations/20251022T143045_create_users.ts
 
-// Initialize application database
-const dbResult = await Database.getInstance("./app.db")
-if (dbResult.isError) throw new Error(dbResult.error)
-const db = dbResult.value
+# Run pending migrations
+bun migrate
 
-// Load migrations from directory
-const migrationsResult = await MigrationLoader.load("./migrations")
-if (migrationsResult.isError) {
-  console.error("Failed to load migrations:", migrationsResult.error)
-  process.exit(1)
-}
+# Check status
+bun migrate:status
 
-// Create runner with separate migrations.db
-const runner = new MigrationRunner(
-  db.getConnection(),
-  migrationsResult.value,
-  { migrationsDbPath: "./.migrations.db" }
-)
+# Rollback the last applied migration
+bun migrate:down
 
-// Run pending migrations
-const result = await runner.migrate()
-if (!result.isError) {
-  console.log(`Executed ${result.value} migration(s)`)
-}
+# Rollback a specific migration by version
+bun migrate:down 20251022T143045_create_users
 
-// Check status
-const status = await runner.status()
-if (!status.isError) {
-  console.log(`Applied: ${status.value.applied.length}`)
-  console.log(`Pending: ${status.value.pending.length}`)
-}
-
-// Cleanup
-runner.close()
-db.close()
+# With custom paths
+DATABASE_URL=./db/app.db MIGRATIONS_DIR=./db/migrations bun migrate
+DATABASE_URL=./db/app.db MIGRATIONS_DIR=./db/migrations bun migrate:generate add_posts
+DATABASE_URL=./db/app.db MIGRATIONS_DIR=./db/migrations bun migrate:down
 ```
+
+See the [Setup](#setup) section for detailed configuration instructions.
 
 #### Separate Migrations Database
 
@@ -500,30 +607,6 @@ Conflicting files:
 ```
 
 Fix by using different timestamps for each migration file.
-
-#### Manual Migration Execution
-
-If you prefer to create migrations manually:
-
-```typescript
-const migrations = {
-  "20251022T143045": {
-    up: (db) => {
-      db.exec("CREATE TABLE users (id TEXT PRIMARY KEY)")
-    },
-    down: (db) => {
-      db.exec("DROP TABLE users")
-    },
-  },
-}
-
-const runner = new MigrationRunner(db.getConnection(), migrations, {
-  migrationsDbPath: "./.migrations.db"
-})
-
-await runner.initialize()
-const result = await runner.migrate()
-```
 
 ## Configuration
 

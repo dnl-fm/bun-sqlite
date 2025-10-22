@@ -44,7 +44,7 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
         return queryResult
       }
 
-      const stmt = this.connection.prepare(queryResult.value.getPositionalSql())
+      const stmt = this.connection.prepare(queryResult.value.getSql())
       const row = stmt.get(...queryResult.value.getParams())
 
       if (!row) {
@@ -72,7 +72,7 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
         return queryResult
       }
 
-      const stmt = this.connection.prepare(queryResult.value.getPositionalSql())
+      const stmt = this.connection.prepare(queryResult.value.getSql())
       const rows = stmt.all()
 
       return {
@@ -94,8 +94,8 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
    */
   findByQuery(query: Query): Result<TEntity[]> {
     try {
-      const stmt = this.connection.prepare(query.getPositionalSql())
-      const rows = stmt.all(...query.getParams())
+      const stmt = this.connection.prepare(query.getSql())
+      const rows = stmt.all(query.getParams())
 
       return {
         isError: false,
@@ -116,8 +116,8 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
    */
   findOneByQuery(query: Query): Result<TEntity | null> {
     try {
-      const stmt = this.connection.prepare(query.getPositionalSql())
-      const row = stmt.get(...query.getParams())
+      const stmt = this.connection.prepare(query.getSql())
+      const row = stmt.get(query.getParams())
 
       if (!row) {
         return { isError: false, value: null }
@@ -144,7 +144,7 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
         return queryResult
       }
 
-      const stmt = this.connection.prepare(queryResult.value.getPositionalSql())
+      const stmt = this.connection.prepare(queryResult.value.getSql())
       const result = stmt.get() as { count: number } | undefined
 
       return {
@@ -166,8 +166,8 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
    */
   countByQuery(query: Query): Result<number> {
     try {
-      const stmt = this.connection.prepare(query.getPositionalSql())
-      const result = stmt.get(...query.getParams()) as { count: number } | undefined
+      const stmt = this.connection.prepare(query.getSql())
+      const result = stmt.get(query.getParams()) as { count: number } | undefined
 
       return {
         isError: false,
@@ -196,8 +196,8 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
         return queryResult
       }
 
-      const stmt = this.connection.prepare(queryResult.value.getPositionalSql())
-      const result = stmt.get(...queryResult.value.getParams())
+      const stmt = this.connection.prepare(queryResult.value.getSql())
+      const result = stmt.get(queryResult.value.getParams())
 
       return {
         isError: false,
@@ -220,8 +220,8 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
    */
   queryRaw(query: Query): Result<unknown[]> {
     try {
-      const stmt = this.connection.prepare(query.getPositionalSql())
-      const rows = stmt.all(...query.getParams())
+      const stmt = this.connection.prepare(query.getSql())
+      const rows = stmt.all(query.getParams())
 
       return {
         isError: false,
@@ -242,8 +242,8 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
    */
   update(query: Query): Result<number> {
     try {
-      const stmt = this.connection.prepare(query.getPositionalSql())
-      const result = stmt.run(...query.getParams())
+      const stmt = this.connection.prepare(query.getSql())
+      const result = stmt.run(query.getParams())
 
       return {
         isError: false,
@@ -264,8 +264,8 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
    */
   delete(query: Query): Result<number> {
     try {
-      const stmt = this.connection.prepare(query.getPositionalSql())
-      const result = stmt.run(...query.getParams())
+      const stmt = this.connection.prepare(query.getSql())
+      const result = stmt.run(query.getParams())
 
       return {
         isError: false,
@@ -292,8 +292,8 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
         return queryResult
       }
 
-      const stmt = this.connection.prepare(queryResult.value.getPositionalSql())
-      const result = stmt.run(...queryResult.value.getParams())
+      const stmt = this.connection.prepare(queryResult.value.getSql())
+      const result = stmt.run(queryResult.value.getParams())
 
       return {
         isError: false,
@@ -314,8 +314,8 @@ export abstract class BaseRepository<TEntity, TId extends EntityId> {
    */
   insert(query: Query): Result<number> {
     try {
-      const stmt = this.connection.prepare(query.getPositionalSql())
-      const result = stmt.run(...query.getParams())
+      const stmt = this.connection.prepare(query.getSql())
+      const result = stmt.run(query.getParams())
 
       return {
         isError: false,

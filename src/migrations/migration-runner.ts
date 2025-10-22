@@ -127,6 +127,85 @@ export class MigrationRunner {
   }
 
   /**
+   * Rollback the last applied migration
+   *
+   * @returns Result with number of rollbacks (0 or 1) or error
+   */
+  async rollbackLast(): Promise<Result<number>> {
+    try {
+      const initResult = await this.initialize()
+      if (initResult.isError) {
+        return initResult
+      }
+
+      const appliedResult = await this.migrationsDb.getApplied()
+      if (appliedResult.isError) {
+        return appliedResult
+      }
+
+      const appliedVersions = appliedResult.value
+      if (appliedVersions.length === 0) {
+        return { isError: false, value: 0 }
+      }
+
+      // Get the last applied migration (reverse order)
+      const lastVersion = appliedVersions[appliedVersions.length - 1]
+      const result = await this.rollbackMigration(lastVersion)
+
+      if (result.isError) {
+        return result
+      }
+
+      return { isError: false, value: 1 }
+    } catch (error) {
+      return {
+        isError: true,
+        error: `Failed to rollback last migration: ${error}`,
+      }
+    }
+  }
+
+  /**
+   * Rollback a specific migration by version
+   *
+   * @param version Migration version to rollback
+   * @returns Result indicating success or error
+   */
+  async rollback(version: string): Promise<Result<number>> {
+    try {
+      const initResult = await this.initialize()
+      if (initResult.isError) {
+        return initResult
+      }
+
+      const appliedResult = await this.migrationsDb.getApplied()
+      if (appliedResult.isError) {
+        return appliedResult
+      }
+
+      const appliedVersions = appliedResult.value
+      if (!appliedVersions.includes(version)) {
+        return {
+          isError: true,
+          error: `Migration not applied: ${version}`,
+        }
+      }
+
+      const result = await this.rollbackMigration(version)
+      if (result.isError) {
+        return result
+      }
+
+      return { isError: false, value: 1 }
+    } catch (error) {
+      return {
+        isError: true,
+        error: `Failed to rollback migration ${version}: ${error}`,
+      }
+    }
+  }
+
+  /**
    * Close the migrations database connection
    *
    * Should be called before application shutdown.
@@ -167,6 +246,48 @@ export class MigrationRunner {
       return {
         isError: true,
         error: `Failed to run migration ${version}: ${error}`,
+      }
+    }
+  }
+
+  /**
+   * Rollback a single migration
+   * @private
+   */
+  private async rollbackMigration(version: string): Promise<Result<void>> {
+    try {
+      const migration = this.migrations.get(version)
+
+      if (!migration) {
+        return {
+          isError: true,
+          error: `Migration not found: ${version}`,
+        }
+      }
+
+      // Check if migration has down function
+      if (!migration.down) {
+        return {
+          isError: true,
+          error: `Migration has no rollback: ${version}. Add a down() function to the migration file.`,
+        }
+      }
+
+      // Execute down migration
+      await migration.down(this.connection)
+
+      // Remove migration from migrations database
+      const removeResult = await this.migrationsDb.removeApplied(version)
+
+      if (removeResult.isError) {
+        return removeResult
+      }
+
+      return { isError: false, value: undefined }
+    } catch (error) {
+      return {
+        isError: true,
+        error: `Failed to rollback migration ${version}: ${error}`,
       }
     }
   }

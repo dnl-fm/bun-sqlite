@@ -7,7 +7,7 @@ import type { Result } from "../types.ts"
 
 /**
  * Query value object with named placeholders
- * Syntax: :paramName
+ * Supports `:paramName` syntax that directly maps to Bun's SQLite named parameters
  * Example: Query.create('SELECT * FROM users WHERE email = :email', { email: 'test@example.com' })
  */
 export class Query {
@@ -81,7 +81,7 @@ export class Query {
         }
       }
 
-      // Convert named placeholders to positional (?)
+      // Convert named placeholders to positional parameters for Bun's SQLite API
       const positionalParams = uniquePlaceholders.map(p => providedParams[p])
 
       return {
@@ -125,28 +125,33 @@ export class Query {
   }
 
   /**
-   * Get the original SQL with named placeholders
+   * Get the SQL with named placeholders (:paramName syntax)
+   * @returns SQL string with :paramName placeholders for Bun SQLite
    */
-  getOriginalSql(): string {
+  getSql(): string {
     return this.sql
   }
 
   /**
    * Get the SQL converted to positional placeholders
+   * @returns SQL string with ? placeholders
    */
   getPositionalSql(): string {
-    return this.getOriginalSql().replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, "?")
+    return this.getSql().replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, "?")
   }
 
   /**
-   * Get parameters as array (positional order)
+   * Get parameters as array in positional order
+   * Used with Bun's SQLite API for parameter binding
+   * @returns Array of parameter values in placeholder order
    */
   getParams(): unknown[] {
     return [...this.positionalParams]
   }
 
   /**
-   * Get parameters as object (named)
+   * Get parameters as an object (named)
+   * @returns Object with parameter names and values
    */
   getNamedParams(): Record<string, unknown> {
     return { ...this.params }
@@ -205,8 +210,7 @@ export class Query {
    */
   debug(): object {
     return {
-      originalSql: this.sql,
-      positionalSql: this.getPositionalSql(),
+      sql: this.sql,
       namedParams: this.params,
       positionalParams: this.positionalParams,
       placeholders: this.placeholders,

@@ -62,12 +62,12 @@ export class MigrationValidator {
 
     // Return validated migration module
     const migration: MigrationModule = {
-      up: mod.up as (db: any) => void | Promise<void>,
+      up: mod.up as (db: unknown) => void | Promise<void>,
     }
 
     // Only add down if it's a function
     if (mod.down && typeof mod.down === "function") {
-      migration.down = mod.down as (db: any) => void | Promise<void>
+      migration.down = mod.down as (db: unknown) => void | Promise<void>
     }
 
     return { isError: false, value: migration }

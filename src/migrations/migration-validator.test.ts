@@ -9,9 +9,10 @@ describe("MigrationValidator", () => {
   describe("validate - Valid modules", () => {
     test("should accept module with up function only", () => {
       // Arrange
-      const module = {
-        up: (db: any) => {
-          db.exec("CREATE TABLE users (id TEXT PRIMARY KEY)")
+      const module: { up: (_db: unknown) => void } = {
+        up: (_db: unknown) => {
+          // biome-ignore lint/suspicious/noExplicitAny: Test utility
+          ;(_db as any)?.exec("CREATE TABLE users (id TEXT PRIMARY KEY)")
         },
       }
 
@@ -29,7 +30,7 @@ describe("MigrationValidator", () => {
     test("should accept module with async up function", () => {
       // Arrange
       const module = {
-        up: async (db: any) => {
+        up: async (_db: unknown) => {
           await Promise.resolve()
         },
       }
@@ -46,12 +47,14 @@ describe("MigrationValidator", () => {
 
     test("should accept module with up and down functions", () => {
       // Arrange
-      const module = {
-        up: (db: any) => {
-          db.exec("CREATE TABLE users (id TEXT PRIMARY KEY)")
+      const module: { up: (_db: unknown) => void; down: (_db: unknown) => void } = {
+        up: (_db: unknown) => {
+          // biome-ignore lint/suspicious/noExplicitAny: Test utility
+          ;(_db as any)?.exec("CREATE TABLE users (id TEXT PRIMARY KEY)")
         },
-        down: (db: any) => {
-          db.exec("DROP TABLE users")
+        down: (_db: unknown) => {
+          // biome-ignore lint/suspicious/noExplicitAny: Test utility
+          ;(_db as any)?.exec("DROP TABLE users")
         },
       }
 
@@ -70,8 +73,8 @@ describe("MigrationValidator", () => {
     test("should accept module with async down function", () => {
       // Arrange
       const module = {
-        up: (db: any) => {},
-        down: async (db: any) => {
+        up: (_db: unknown) => {},
+        down: async (_db: unknown) => {
           await Promise.resolve()
         },
       }
@@ -89,8 +92,8 @@ describe("MigrationValidator", () => {
     test("should accept module with extra properties", () => {
       // Arrange
       const module = {
-        up: (db: any) => {},
-        down: (db: any) => {},
+        up: (_db: unknown) => {},
+        down: (_db: unknown) => {},
         description: "This is a migration",
         version: "20251022T143045",
       }
@@ -109,7 +112,7 @@ describe("MigrationValidator", () => {
     test("should accept module with null down function", () => {
       // Arrange
       const module = {
-        up: (db: any) => {},
+        up: (_db: unknown) => {},
         down: null,
       }
 
@@ -127,7 +130,7 @@ describe("MigrationValidator", () => {
     test("should accept module with undefined down function", () => {
       // Arrange
       const module = {
-        up: (db: any) => {},
+        up: (_db: unknown) => {},
         down: undefined,
       }
 
@@ -193,7 +196,7 @@ describe("MigrationValidator", () => {
     test("should reject module without up function", () => {
       // Arrange
       const module = {
-        down: (db: any) => {},
+        down: (_db: unknown) => {},
       }
 
       // Act
@@ -241,7 +244,7 @@ describe("MigrationValidator", () => {
     test("should reject module with non-function down", () => {
       // Arrange
       const module = {
-        up: (db: any) => {},
+        up: (_db: unknown) => {},
         down: "not a function",
       }
 
@@ -258,7 +261,7 @@ describe("MigrationValidator", () => {
     test("should reject module with number down", () => {
       // Arrange
       const module = {
-        up: (db: any) => {},
+        up: (_db: unknown) => {},
         down: 123,
       }
 
@@ -275,7 +278,7 @@ describe("MigrationValidator", () => {
     test("should reject module with object down", () => {
       // Arrange
       const module = {
-        up: (db: any) => {},
+        up: (_db: unknown) => {},
         down: { some: "object" },
       }
 
