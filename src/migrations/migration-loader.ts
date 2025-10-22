@@ -87,7 +87,10 @@ export class MigrationLoader {
 
         try {
           // Dynamically import the module (use absolute path)
+          // Note: JSR warning about dynamic import is intentional - migration files are loaded
+          // at runtime based on directory scanning, not known at publish time
           const absolutePath = resolve(filePath)
+          // deno-lint-ignore no-dynamic-import
           const module = await import(absolutePath)
 
           // Validate the module structure
