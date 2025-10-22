@@ -1,9 +1,13 @@
 /**
  * Migration runner
  * Executes and tracks database migrations
+ *
+ * Uses a separate migrations.db file to track applied migrations,
+ * keeping migration history independent from the application database.
  */
 
 import type { DatabaseConnection, Result } from "../types.ts"
+import { MigrationsDatabaseManager } from "./migrations-database-manager.ts"
 
 /**
  * Migration module interface for versioned database schema changes
@@ -16,42 +20,46 @@ export interface MigrationModule {
 }
 
 /**
+ * Migration runner options
+ */
+export interface MigrationRunnerOptions {
+  /** Path to migrations database file (default: "./.migrations.db") */
+  migrationsDbPath?: string
+}
+
+/**
  * Migration runner for managing database schema versioning
  */
 export class MigrationRunner {
   private connection: DatabaseConnection
   private migrations: Map<string, MigrationModule>
+  private migrationsDb: MigrationsDatabaseManager
+  private migrationsDbPath: string
 
   /**
    * Create a new migration runner
    * @param connection Database connection to run migrations on
    * @param migrations Record mapping version strings to migration modules
+   * @param options Optional configuration
    */
-  constructor(connection: DatabaseConnection, migrations: Record<string, MigrationModule>) {
+  constructor(
+    connection: DatabaseConnection,
+    migrations: Record<string, MigrationModule>,
+    options?: MigrationRunnerOptions
+  ) {
     this.connection = connection
     this.migrations = new Map(Object.entries(migrations))
+    this.migrationsDbPath = options?.migrationsDbPath ?? "./.migrations.db"
+    this.migrationsDb = new MigrationsDatabaseManager(this.migrationsDbPath)
   }
 
   /**
-   * Initialize migration tracking table
+   * Initialize migration tracking database
+   *
+   * Initializes the separate .migrations.db file for tracking applied migrations.
    */
   async initialize(): Promise<Result<void>> {
-    try {
-      this.connection.exec(`
-        CREATE TABLE IF NOT EXISTS _migrations (
-          version TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          applied_at INTEGER NOT NULL,
-          checksum TEXT NOT NULL
-        )
-      `)
-      return { isError: false, value: undefined }
-    } catch (error) {
-      return {
-        isError: true,
-        error: `Failed to initialize migrations table: ${error}`,
-      }
-    }
+    return this.migrationsDb.initialize()
   }
 
   /**
@@ -59,17 +67,23 @@ export class MigrationRunner {
    */
   async migrate(): Promise<Result<number>> {
     try {
-      await this.initialize()
+      const initResult = await this.initialize()
+      if (initResult.isError) {
+        return initResult
+      }
 
       const sortedVersions = Array.from(this.migrations.keys()).sort()
+      const statusResult = await this.migrationsDb.getApplied()
+
+      if (statusResult.isError) {
+        return statusResult
+      }
+
+      const appliedVersions = statusResult.value
       let migratedCount = 0
 
       for (const version of sortedVersions) {
-        const isApplied = this.connection
-          .prepare("SELECT 1 FROM _migrations WHERE version = ?")
-          .get(version)
-
-        if (!isApplied) {
+        if (!appliedVersions.includes(version)) {
           const result = await this.runMigration(version)
           if (result.isError) {
             return result
@@ -97,27 +111,28 @@ export class MigrationRunner {
     }>
   > {
     try {
-      await this.initialize()
-
-      const stmt = this.connection.prepare("SELECT version FROM _migrations")
-      const applied = (stmt.all() as { version: string }[]).map(r => r.version)
-
-      const allVersions = Array.from(this.migrations.keys())
-      const pending = allVersions.filter(v => !applied.includes(v))
-
-      return {
-        isError: false,
-        value: {
-          applied,
-          pending,
-        },
+      const initResult = await this.initialize()
+      if (initResult.isError) {
+        return initResult
       }
+
+      const allVersions = Array.from(this.migrations.keys()).sort()
+      return this.migrationsDb.getStatus(allVersions)
     } catch (error) {
       return {
         isError: true,
         error: `Failed to get status: ${error}`,
       }
     }
+  }
+
+  /**
+   * Close the migrations database connection
+   *
+   * Should be called before application shutdown.
+   */
+  close(): void {
+    this.migrationsDb.close()
   }
 
   /**
@@ -140,14 +155,12 @@ export class MigrationRunner {
         await migration.up(this.connection)
       }
 
-      // Record migration
-      const now = Date.now()
-      this.connection
-        .prepare(
-          `INSERT INTO _migrations (version, name, applied_at, checksum)
-         VALUES (?, ?, ?, ?)`
-        )
-        .run(version, version, now, "")
+      // Record migration in migrations database
+      const recordResult = await this.migrationsDb.recordApplied(version, version)
+
+      if (recordResult.isError) {
+        return recordResult
+      }
 
       return { isError: false, value: undefined }
     } catch (error) {

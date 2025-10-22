@@ -388,15 +388,128 @@ repo.commit(): void
 repo.rollback(): void
 ```
 
-### MigrationRunner
+### MigrationRunner & MigrationLoader
 
-Versioned schema migrations:
+Modern versioned schema migrations with automatic discovery and separate tracking database.
+
+#### Migration File Format
+
+Migrations must use timestamp versioning to ensure consistent ordering:
+
+```
+Format: YYYYMMDDTHHMMSS_description.ts
+Example: 20251022T143045_create_users.ts
+```
+
+- **YYYY**: 4-digit year
+- **MM**: 2-digit month (01-12)
+- **DD**: 2-digit day (01-31)
+- **T**: Literal "T" separator
+- **HH**: 2-digit hour (00-23)
+- **MM**: 2-digit minute (00-59)
+- **SS**: 2-digit second (00-59)
+- **_description**: Lowercase alphanumeric and underscores only
+
+#### Migration File Structure
+
+Each migration file must export `up` and optionally `down` functions:
+
+```typescript
+// migrations/20251022T143045_create_users.ts
+import type { DatabaseConnection } from "@dnl-fm/bun-sqlite"
+
+export async function up(db: DatabaseConnection): Promise<void> {
+  db.exec(`
+    CREATE TABLE users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `)
+}
+
+export async function down(db: DatabaseConnection): Promise<void> {
+  db.exec("DROP TABLE IF EXISTS users")
+}
+```
+
+#### Using MigrationLoader
+
+Automatically discover and load migrations from a directory:
+
+```typescript
+import { Database, MigrationLoader, MigrationRunner } from "@dnl-fm/bun-sqlite"
+
+// Initialize application database
+const dbResult = await Database.getInstance("./app.db")
+if (dbResult.isError) throw new Error(dbResult.error)
+const db = dbResult.value
+
+// Load migrations from directory
+const migrationsResult = await MigrationLoader.load("./migrations")
+if (migrationsResult.isError) {
+  console.error("Failed to load migrations:", migrationsResult.error)
+  process.exit(1)
+}
+
+// Create runner with separate migrations.db
+const runner = new MigrationRunner(
+  db.getConnection(),
+  migrationsResult.value,
+  { migrationsDbPath: "./.migrations.db" }
+)
+
+// Run pending migrations
+const result = await runner.migrate()
+if (!result.isError) {
+  console.log(`Executed ${result.value} migration(s)`)
+}
+
+// Check status
+const status = await runner.status()
+if (!status.isError) {
+  console.log(`Applied: ${status.value.applied.length}`)
+  console.log(`Pending: ${status.value.pending.length}`)
+}
+
+// Cleanup
+runner.close()
+db.close()
+```
+
+#### Separate Migrations Database
+
+Migrations are tracked in a separate `.migrations.db` SQLite file:
+
+- **Path**: Configurable via `migrationsDbPath` option (default: `./.migrations.db`)
+- **Table**: `_migrations_applied` with columns: `version`, `description`, `applied_at`, `checksum`
+- **Purpose**: Keeps migration history independent from application database
+- **Safety**: Uses WAL mode for data integrity
+
+#### Collision Detection
+
+The loader automatically detects duplicate timestamps:
+
+```
+Migration version collision detected: 20251022T143045
+
+Conflicting files:
+  - ./migrations/20251022T143045_create_users.ts
+  - ./migrations/20251022T143045_add_posts.ts
+```
+
+Fix by using different timestamps for each migration file.
+
+#### Manual Migration Execution
+
+If you prefer to create migrations manually:
 
 ```typescript
 const migrations = {
-  "001_initial_schema": {
+  "20251022T143045": {
     up: (db) => {
-      db.exec("CREATE TABLE users (...)")
+      db.exec("CREATE TABLE users (id TEXT PRIMARY KEY)")
     },
     down: (db) => {
       db.exec("DROP TABLE users")
@@ -404,16 +517,12 @@ const migrations = {
   },
 }
 
-const runner = new MigrationRunner(db.getConnection(), migrations)
+const runner = new MigrationRunner(db.getConnection(), migrations, {
+  migrationsDbPath: "./.migrations.db"
+})
 
-// Initialize tracking table
 await runner.initialize()
-
-// Run pending migrations
 const result = await runner.migrate()
-
-// Get status
-const status = await runner.status()
 ```
 
 ## Configuration

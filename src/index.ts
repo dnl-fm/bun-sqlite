@@ -15,8 +15,15 @@ export { Query } from "./query/query.ts"
 export { BaseRepository } from "./repository/base-repository.ts"
 
 // Migration exports
-export { MigrationRunner } from "./migrations/migration-runner.ts"
-export type { MigrationModule } from "./migrations/migration-runner.ts"
+export { MigrationRunner, loadMigrations } from "./migrations/index.ts"
+export {
+  MigrationFileInfo,
+  MigrationValidator,
+  MigrationCollisionDetector,
+  MigrationLoader,
+  MigrationsDatabaseManager,
+} from "./migrations/index.ts"
+export type { MigrationModule, MigrationRunnerOptions } from "./migrations/index.ts"
 
 // ID exports
 export { Ulid, NanoId } from "./id/index.ts"
